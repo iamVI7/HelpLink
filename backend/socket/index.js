@@ -7,7 +7,7 @@ const onlineUsers   = new Set(); // userId set for fast lookup
 const initSocket = (server) => {
   io = socketIO(server, {
     cors: {
-      origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+      origin: process.env.FRONTEND_URL,
       methods: ['GET', 'POST'],
       credentials: true
     },
