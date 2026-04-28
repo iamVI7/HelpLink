@@ -150,7 +150,7 @@ const createRequest = async (req, res) => {
     if (req.files && req.files.length > 0) {
       const limit = isSOS ? 1 : req.files.length;
       mediaData.images = req.files.slice(0, limit).map(file => ({
-        url: `/uploads/${file.filename}`,
+        url: file.path,
       }));
     }
 
@@ -687,7 +687,7 @@ const updateRequest = async (req, res) => {
     });
 
     if (req.files && req.files.length > 0) {
-      const newImages = req.files.map(file => ({ url: `/uploads/${file.filename}` }));
+      const newImages = req.files.map(file => ({ url: file.path }));
       request.media = {
         images: [...(request.media?.images || []), ...newImages],
         uploadedBy: 'user',
@@ -747,7 +747,7 @@ const addGuestImage = async (req, res) => {
     }
 
     request.media = {
-      images: [{ url: `/uploads/${req.file.filename}` }],
+      images: [{ url: req.file.path }],
       uploadedBy: 'guest',
     };
 
