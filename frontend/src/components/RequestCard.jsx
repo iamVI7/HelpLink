@@ -429,7 +429,7 @@ const RequestCard = ({
           img.url && (
             <img
               key={index}
-              url={`/uploads/${img.filename}`}
+              src={img.url}
               alt="incident"
               className="rc-media-img"
             />
