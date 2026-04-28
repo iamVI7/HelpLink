@@ -338,8 +338,7 @@ const EvidenceModal = ({ open, onClose, request }) => {
 
   if (!open || !request) return null;
   const images = request.media?.images?.filter(img => img.url) || [];
-  const BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL)
-    ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:5000';
+  // BASE_URL removed — img.url is now a full Cloudinary URL
 
   return (
     <div
@@ -398,8 +397,8 @@ const EvidenceModal = ({ open, onClose, request }) => {
             ) : (
               <>
                 <div className="relative rounded-xl overflow-hidden border border-stone-200 bg-stone-50 mb-3" style={{ aspectRatio: '16/9' }}>
-                  <img src={`${BASE_URL}${images[activeIdx].url}`} alt={`Evidence ${activeIdx + 1}`} className="w-full h-full object-contain" />
-                  <a href={`${BASE_URL}${images[activeIdx].url}`} target="_blank" rel="noopener noreferrer"
+                  <img src={images[activeIdx].url} alt={`Evidence ${activeIdx + 1}`} className="w-full h-full object-contain" />
+                  <a href={images[activeIdx].url} target="_blank" rel="noopener noreferrer"
                     className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded-lg bg-black/50 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-black/70 transition-colors">
                     Full Size
                   </a>
@@ -417,7 +416,7 @@ const EvidenceModal = ({ open, onClose, request }) => {
                       <button key={idx} onClick={() => setActiveIdx(idx)}
                         className="w-14 h-14 rounded-lg overflow-hidden border-2 transition-all shrink-0"
                         style={{ borderColor: idx === activeIdx ? '#1a1714' : 'transparent' }}>
-                        <img src={`${BASE_URL}${img.url}`} alt={`Thumb ${idx + 1}`} className="w-full h-full object-cover" />
+                        <img src={img.url} alt={`Thumb ${idx + 1}`} className="w-full h-full object-cover" />
                       </button>
                     ))}
                   </div>
