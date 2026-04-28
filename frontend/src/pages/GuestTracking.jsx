@@ -689,12 +689,6 @@ const GuestTracking = () => {
           </div>
         </div>
 
-        {/* ✅ EXTENDED — show publicId watermark if available, else Mongo _id */}
-        {(publicId || requestId) && (
-          <p style={{ textAlign:'center',marginTop:'1.25rem',fontSize:'0.55rem',color:'#d1d5db',fontFamily:'monospace',letterSpacing:'0.08em',animation:'gt_fadeUp 0.5s 0.35s ease both' }}>
-            {publicId || requestId}
-          </p>
-        )}
       </div>
     </div>
   );

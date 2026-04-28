@@ -450,12 +450,6 @@ const TrackingPage = () => {
           </button>
         </div>
 
-        {/* ✅ EXTENDED — show publicId watermark if available, else fall back to Mongo _id */}
-        {(request.publicId || requestId) && (
-          <p style={{ textAlign:'center',marginTop:'1.25rem',fontSize:'0.52rem',color:'#d1d5db',fontFamily:'monospace',letterSpacing:'0.08em',animation:'fadeUp 0.5s 0.35s ease both' }}>
-            {request.publicId || requestId}
-          </p>
-        )}
       </div>
     </div>
   );
