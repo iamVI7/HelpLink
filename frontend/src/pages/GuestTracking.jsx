@@ -262,7 +262,7 @@ const GuestTracking = () => {
       localStorage.setItem('guestId', guestId);
     }
 
-    const socket = io('http://localhost:5000', {
+    const socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000', {
       auth: { guestId },
       transports: ['websocket'],
       autoConnect: true,
@@ -563,7 +563,7 @@ const GuestTracking = () => {
                   <div className="flex flex-col items-center gap-2">
                     <div className="rounded-2xl overflow-hidden border border-stone-100" style={{ boxShadow:'0 2px 12px rgba(0,0,0,0.07)' }}>
                       <img
-                        src={`http://localhost:5000${images[0].url}`}
+                        src={images[0].url}
                         alt="SOS photo"
                         style={{ width: 140, height: 100, objectFit: 'cover', display: 'block' }}
                       />

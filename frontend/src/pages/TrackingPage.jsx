@@ -360,7 +360,7 @@ const TrackingPage = () => {
             {/* ✅ FIX 2 — incident image from backend */}
             {hasImage && (
               <div className="mt-4">
-                <img src={`http://localhost:5000${images[0].url}`} alt="incident"
+                <img src={images[0].url} alt="incident"
                   className="w-full rounded-lg border" />
               </div>
             )}
