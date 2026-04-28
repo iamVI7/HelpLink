@@ -45,8 +45,12 @@ const registerValidation = [
   body('phoneNumber')
     .isLength({ min: 10, max: 10 }).withMessage('Phone number must be 10 digits'),
 
+  // FIX: address is optional in validation — the controller and frontend
+  // both guarantee a coordinate-based fallback when Nominatim fails on
+  // mobile networks, so we must not reject requests with a missing address.
   body('address')
-    .notEmpty().withMessage('Address is required'),
+    .optional({ nullable: true, checkFalsy: true })
+    .trim(),
 
   body('location.coordinates')
     .isArray().withMessage('Location coordinates are required')

@@ -34,31 +34,49 @@ const Register = () => {
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
+  // ── FIX: always guarantee address is a non-empty string ──
   const handleLocationSelect = (location, address) => {
+    const fallbackAddress = `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}`;
     setFormData({
       ...formData,
       location: { type: 'Point', coordinates: [location.lng, location.lat] },
-      address: address || formData.address,
+      address: (address && address.trim()) ? address.trim() : fallbackAddress,
     });
   };
 
   const handleUseCurrentLocation = () => {
-    if (!navigator.geolocation) { alert('Geolocation is not supported by your browser.'); return; }
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser.');
+      return;
+    }
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords;
+        // ── FIX: always start with coordinate fallback so address is never empty ──
         let address = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
         try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+            { signal: AbortSignal.timeout(5000) } // 5s timeout for slow mobile networks
+          );
           const data = await res.json();
-          if (data.display_name) address = data.display_name;
-        } catch (_) {}
-        setFormData((prev) => ({ ...prev, location: { type: 'Point', coordinates: [lng, lat] }, address }));
+          if (data && data.display_name) address = data.display_name;
+        } catch (_) {
+          // Nominatim failed (common on mobile) — coordinate fallback already set above
+        }
+        setFormData((prev) => ({
+          ...prev,
+          location: { type: 'Point', coordinates: [lng, lat] },
+          address, // always a valid string
+        }));
         setDetectedCoords({ lat, lng });
         setLocating(false);
       },
-      () => { alert('Unable to retrieve your location. Please allow location access.'); setLocating(false); },
+      () => {
+        alert('Unable to retrieve your location. Please allow location access.');
+        setLocating(false);
+      },
       { enableHighAccuracy: true, timeout: 10000 }
     );
   };
@@ -67,7 +85,10 @@ const Register = () => {
     e.preventDefault();
     if (step === 1) {
       if (!formData.name || !formData.email || !formData.password) return;
-      if (formData.password.length < 6) { alert('Password must be at least 6 characters long'); return; }
+      if (formData.password.length < 6) {
+        alert('Password must be at least 6 characters long');
+        return;
+      }
     }
     if (step === 2 && !formData.phoneNumber) return;
     setStep((s) => s + 1);
@@ -77,7 +98,18 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.location) { alert('📍 Please select your location on the map'); return; }
+    if (!formData.location) {
+      alert('📍 Please select your location on the map');
+      return;
+    }
+    // ── FIX: final safety net — if address somehow still empty, use coordinates ──
+    if (!formData.address || !formData.address.trim()) {
+      const [lng, lat] = formData.location.coordinates;
+      setFormData((prev) => ({
+        ...prev,
+        address: `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+      }));
+    }
     setLoading(true);
     const result = await register(formData);
     if (result.success) navigate('/dashboard');
@@ -378,7 +410,7 @@ const Register = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                     <span className="text-xs text-green-700 leading-relaxed">
-                      {formData.address.substring(0, 80)}…
+                      {formData.address.substring(0, 80)}{formData.address.length > 80 ? '…' : ''}
                     </span>
                   </div>
                 )}
