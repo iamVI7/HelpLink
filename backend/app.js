@@ -15,12 +15,16 @@ const profileRoutes = require('./routes/profileRoutes');
 
 // Ensure models are registered with Mongoose on startup
 require('./models/Warning');
-require('./models/EmergencyProfile'); // ← NEW: register EmergencyProfile model
+require('./models/EmergencyProfile');
 
 // Connect to database
 connectDB();
 
 const app = express();
+
+// FIX: trust Render's proxy so express-rate-limit can correctly
+// identify real client IPs from the X-Forwarded-For header
+app.set('trust proxy', 1);
 
 // Rate limiting
 const limiter = rateLimit({
@@ -48,7 +52,6 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Apply rate limiting to API routes
 app.use('/api/', limiter);
-
 
 // Routes
 app.use('/api/auth',     authRoutes);
