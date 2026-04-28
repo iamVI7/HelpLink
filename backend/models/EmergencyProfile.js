@@ -64,7 +64,4 @@ const emergencyProfileSchema = new mongoose.Schema(
   }
 );
 
-// Index for fast lookups by userId (already unique, but explicit for clarity)
-emergencyProfileSchema.index({ userId: 1 });
-
 module.exports = mongoose.model('EmergencyProfile', emergencyProfileSchema);

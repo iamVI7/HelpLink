@@ -211,7 +211,5 @@ requestSchema.index({ status: 1, urgency: -1, createdAt: -1 });
 requestSchema.index({ createdBy: 1, createdAt: -1 });
 requestSchema.index({ acceptedBy: 1, createdAt: -1 });
 
-// ✅ NEW — index for fast publicId lookups (tracking page)
-requestSchema.index({ publicId: 1 });
 
 module.exports = mongoose.model('Request', requestSchema);
