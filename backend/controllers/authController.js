@@ -35,9 +35,7 @@ const registerUser = async (req, res) => {
   try {
     let { name, email, password, location, address, phoneNumber } = req.body;
 
-    // FIX: address is no longer required — a coordinate fallback is used when
-    // Nominatim reverse-geocoding fails on mobile networks.
-    if (!name || !email || !password || !location || !phoneNumber) {
+    if (!name || !email || !password || !location || !address || !phoneNumber) {
       return res.status(400).json({
         success: false,
         message: 'All fields are required'
@@ -58,14 +56,6 @@ const registerUser = async (req, res) => {
       });
     }
 
-    // FIX: if address is empty/missing (Nominatim failed on mobile),
-    // build a human-readable fallback from the coordinates.
-    // Coordinates are [lng, lat] in GeoJSON order.
-    const safeAddress =
-      (address && address.trim())
-        ? address.trim()
-        : `${location.coordinates[1].toFixed(5)}, ${location.coordinates[0].toFixed(5)}`;
-
     const userExists = await User.findOne({ email });
     if (userExists) {
       return res.status(400).json({
@@ -82,7 +72,7 @@ const registerUser = async (req, res) => {
         type: 'Point',
         coordinates: location.coordinates
       },
-      address: safeAddress,
+      address,
       phoneNumber
     });
 
@@ -123,7 +113,7 @@ const loginUser = async (req, res) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password'
+        message: 'No account found with this email. Please register first.'
       });
     }
 
@@ -139,7 +129,7 @@ const loginUser = async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password'
+        message: 'Incorrect password. Please try again.'
       });
     }
 
@@ -313,14 +303,14 @@ const restoreUserAdmin = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message
+      message: 'Server error'
     });
   }
 };
 
 
 // ==============================
-// @desc    Send OTP
+// @desc    Send OTP  ← NEW
 // @route   POST /api/auth/send-otp
 // @access  Private (logged-in users only)
 // ==============================
@@ -345,23 +335,23 @@ const sendOTP = async (req, res) => {
     }
 
     // 🔒 Ensure user is requesting OTP for their own number
-    if (user.phoneNumber !== phoneNumber.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Phone number mismatch'
-      });
-    }
+if (user.phoneNumber !== phoneNumber.trim()) {
+  return res.status(400).json({
+    success: false,
+    message: 'Phone number mismatch'
+  });
+}
 
-    const existing = otpStore.get(user.phoneNumber);
+const existing = otpStore.get(user.phoneNumber);
 
-    if (existing && Date.now() < existing.expiresAt) {
-      return res.status(400).json({
-        success: false,
-        message: 'OTP already sent. Please wait before retrying.'
-      });
-    }
+if (existing && Date.now() < existing.expiresAt) {
+  return res.status(400).json({
+    success: false,
+    message: 'OTP already sent. Please wait before retrying.'
+  });
+}
 
-    const otp = generateOTP(user.phoneNumber);
+const otp = generateOTP(user.phoneNumber);
 
     // 📋 Console log for demo (replace with SMS API in production)
     console.log(`\n========================================`);
@@ -385,7 +375,7 @@ const sendOTP = async (req, res) => {
 
 
 // ==============================
-// @desc    Verify OTP
+// @desc    Verify OTP  ← NEW
 // @route   POST /api/auth/verify-otp
 // @access  Private (logged-in users only)
 // ==============================
