@@ -241,7 +241,7 @@ const BackButton = ({ onClick }) => (
 const MapView = () => {
   const { requests, fetchNearbyRequests, requestStatus } = useRequests();
   const { user }   = useAuth();
-  const { updateLocation } = useSocket();
+  const { socket, updateLocation } = useSocket();
   const navigate   = useNavigate();
 
   const [userLocation,    setUserLocation]    = useState(null);
@@ -251,8 +251,9 @@ const MapView = () => {
   const [nearestUserId,   setNearestUserId]   = useState(null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
-  const didInitialFetchRef = useRef(false);
-  const userLocationRef    = useRef(null);
+  const didInitialFetchRef  = useRef(false);
+  const userLocationRef     = useRef(null);
+  const latestSocketReqRef  = useRef(null); // tracks last socket-pushed request id
 
   useEffect(() => {
     setBannerDismissed(false);
@@ -327,17 +328,34 @@ const MapView = () => {
     return () => clearInterval(timer);
   }, [fetchNearby]);
 
-  // ── Fly to latest request ────────────────────────────────────────────────
+  // ── Fly to latest request when requests list grows ─────────────────────
   useEffect(() => {
     if (!map || requests.length === 0) return;
     const latest = [...requests].sort(
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
     )[0];
-    if (latest?.location?.coordinates) {
+    // Only fly if this is a request we haven't panned to yet
+    if (latest?.location?.coordinates && latest._id !== latestSocketReqRef.current) {
+      latestSocketReqRef.current = latest._id;
       const [lng, lat] = latest.location.coordinates;
       map.flyTo([lat, lng], 15, { duration: 1.2 });
     }
   }, [requests.length, map]);
+
+  // ── Real-time: pan to every new_request the moment it arrives ───────────
+  useEffect(() => {
+    if (!socket || !map) return;
+    const handleNewRequest = (data) => {
+      const req = data?.request;
+      if (!req?.location?.coordinates) return;
+      if (latestSocketReqRef.current === req._id) return; // already panned
+      latestSocketReqRef.current = req._id;
+      const [lng, lat] = req.location.coordinates;
+      map.flyTo([lat, lng], 15, { duration: 1.2 });
+    };
+    socket.on('new_request', handleNewRequest);
+    return () => socket.off('new_request', handleNewRequest);
+  }, [socket, map]);
 
   const userIcon = L.divIcon({
     className: '',

@@ -100,11 +100,11 @@ const Login = () => {
         setWarningIndex(0);
         setShowWarning(true);
       } else {
-        navigate('/dashboard');
+        navigate('/map');
       }
     } catch (err) {
       console.error('Could not fetch warnings:', err);
-      navigate('/dashboard');
+      navigate('/map');
     }
   };
 
@@ -121,7 +121,7 @@ const Login = () => {
       setWarningIndex((prev) => prev + 1);
     } else {
       setShowWarning(false);
-      navigate('/dashboard');
+      navigate('/map');
     }
   };
 
