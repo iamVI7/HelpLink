@@ -79,19 +79,23 @@ const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading,  setLoading]  = useState(false);
 
+  // Role stored after login so handleAcknowledge can navigate correctly
+  const roleRef = React.useRef(null);
+
   // Warning state
   const [warnings,      setWarnings]      = useState([]);
   const [warningIndex,  setWarningIndex]  = useState(0);
   const [showWarning,   setShowWarning]   = useState(false);
 
-  const { login, user } = useAuth();
+  const { login }    = useAuth();
   const navigate     = useNavigate();
 
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
   // Fetch unread warnings after login succeeds
-  const fetchAndShowWarnings = async () => {
+  const fetchAndShowWarnings = async (role) => {
+    const dest = role === 'admin' ? '/dashboard' : '/map';
     try {
       const res   = await api.get('/auth/me/warnings');
       const unread = res.data.warnings || [];
@@ -100,11 +104,11 @@ const Login = () => {
         setWarningIndex(0);
         setShowWarning(true);
       } else {
-        navigate(user?.role === 'admin' ? '/dashboard' : '/map');
+        navigate(dest);
       }
     } catch (err) {
       console.error('Could not fetch warnings:', err);
-      navigate(user?.role === 'admin' ? '/dashboard' : '/map');
+      navigate(dest);
     }
   };
 
@@ -121,7 +125,7 @@ const Login = () => {
       setWarningIndex((prev) => prev + 1);
     } else {
       setShowWarning(false);
-      navigate(user?.role === 'admin' ? '/dashboard' : '/map');
+      navigate(roleRef.current === 'admin' ? '/dashboard' : '/map');
     }
   };
 
@@ -130,7 +134,9 @@ const Login = () => {
     setLoading(true);
     const result = await login(formData.email, formData.password);
     if (result.success) {
-      await fetchAndShowWarnings();      // ← check warnings before navigating
+      // Pass role from login result directly — user state may not be set yet
+      roleRef.current = result.role;
+      await fetchAndShowWarnings(result.role);
     } else {
       if (result.error) console.log(result.error);
     }
