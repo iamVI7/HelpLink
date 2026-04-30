@@ -84,7 +84,7 @@ const Login = () => {
   const [warningIndex,  setWarningIndex]  = useState(0);
   const [showWarning,   setShowWarning]   = useState(false);
 
-  const { login }    = useAuth();
+  const { login, user } = useAuth();
   const navigate     = useNavigate();
 
   const handleChange = (e) =>
@@ -100,11 +100,11 @@ const Login = () => {
         setWarningIndex(0);
         setShowWarning(true);
       } else {
-        navigate('/map');
+        navigate(user?.role === 'admin' ? '/dashboard' : '/map');
       }
     } catch (err) {
       console.error('Could not fetch warnings:', err);
-      navigate('/map');
+      navigate(user?.role === 'admin' ? '/dashboard' : '/map');
     }
   };
 
@@ -121,7 +121,7 @@ const Login = () => {
       setWarningIndex((prev) => prev + 1);
     } else {
       setShowWarning(false);
-      navigate('/map');
+      navigate(user?.role === 'admin' ? '/dashboard' : '/map');
     }
   };
 
