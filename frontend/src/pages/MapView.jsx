@@ -118,39 +118,129 @@ const urgencyConfig = {
   low:    { label: 'LOW',    textCls: 'text-green-700',  borderCls: 'border-green-200',  bgCls: 'bg-green-50'  },
 };
 
-// ── Circular Loader ───────────────────────────────────────────────────────────
-const MinimalLoader = () => (
-  <div
-    className="h-screen w-full flex items-center justify-center"
-    style={{ background: '#fafaf9', fontFamily: "'DM Sans','Helvetica Neue',sans-serif" }}
-  >
-    <div className="flex flex-col items-center gap-3">
-      <div
-        style={{
-          width: 48,
-          height: 40,
-          borderRadius: 999,
-          border: '2.5px solid #e7e5e4',
-          borderTopColor: '#1c1917',
-          animation: 'circSpin 0.75s linear infinite',
-        }}
-      />
-      <p
-        style={{
-          fontSize: 10,
-          fontWeight: 700,
-          letterSpacing: '0.2em',
-          textTransform: 'uppercase',
-          color: '#a8a29e',
-          margin: 0,
-        }}
-      >
-        Locating you
-      </p>
+// ── Friendly Loader ───────────────────────────────────────────────────────────
+const LOADER_STEPS = [
+  { icon: '📍', label: 'Finding your location' },
+  { icon: '📡', label: 'Connecting to network'  },
+  { icon: '🗺️', label: 'Loading nearby requests' },
+];
+
+const MinimalLoader = () => {
+  const [step, setStep] = useState(0);
+  const [dots, setDots] = useState('');
+
+  useEffect(() => {
+    const stepTimer = setInterval(() => {
+      setStep(prev => (prev < LOADER_STEPS.length - 1 ? prev + 1 : prev));
+    }, 1800);
+    return () => clearInterval(stepTimer);
+  }, []);
+
+  useEffect(() => {
+    const dotTimer = setInterval(() => {
+      setDots(prev => (prev.length >= 3 ? '' : prev + '.'));
+    }, 420);
+    return () => clearInterval(dotTimer);
+  }, []);
+
+  return (
+    <div
+      style={{
+        height: '100vh',
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#fafaf9',
+        fontFamily: "'DM Sans','Helvetica Neue',sans-serif",
+      }}
+    >
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
+        @keyframes loaderFadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes loaderSpin   { to { transform: rotate(360deg); } }
+        @keyframes loaderPulse  { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        @keyframes stepIn       { from{opacity:0;transform:translateX(-6px)} to{opacity:1;transform:translateX(0)} }
+      `}</style>
+
+      <div style={{
+        background: '#ffffff',
+        borderRadius: 28,
+        border: '1px solid rgba(28,25,23,0.07)',
+        boxShadow: '0 8px 40px rgba(0,0,0,0.07), 0 2px 8px rgba(0,0,0,0.04)',
+        padding: '36px 40px 32px',
+        width: 300,
+        animation: 'loaderFadeUp 0.4s ease both',
+      }}>
+        {/* Spinner */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
+          <div style={{
+            width: 48,
+            height: 48,
+            borderRadius: '50%',
+            border: '3px solid #f0ede9',
+            borderTopColor: '#1c1917',
+            animation: 'loaderSpin 0.8s linear infinite',
+          }} />
+        </div>
+
+        {/* Step list */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
+          {LOADER_STEPS.map((s, i) => {
+            const done    = i < step;
+            const current = i === step;
+            return (
+              <div key={i} style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                opacity: done ? 0.38 : current ? 1 : 0.22,
+                transition: 'opacity 0.4s ease',
+                animation: current ? 'stepIn 0.3s ease both' : 'none',
+              }}>
+                {/* Icon / check */}
+                <div style={{
+                  width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                  background: done ? '#f0fdf4' : current ? '#1c1917' : '#f5f5f4',
+                  border: done ? '1px solid #bbf7d0' : current ? 'none' : '1px solid #e7e5e4',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 13,
+                  transition: 'background 0.3s, border 0.3s',
+                }}>
+                  {done
+                    ? <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2.5 6.5L5.5 9.5L10.5 4" stroke="#16a34a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    : current
+                    ? <span style={{ fontSize: 12, color: 'white' }}>{i + 1}</span>
+                    : <span style={{ fontSize: 12, color: '#a8a29e' }}>{i + 1}</span>
+                  }
+                </div>
+
+                {/* Label */}
+                <span style={{
+                  fontSize: 13,
+                  fontWeight: current ? 600 : 400,
+                  color: done ? '#a8a29e' : current ? '#1c1917' : '#c4c1be',
+                  transition: 'color 0.3s',
+                }}>
+                  {s.label}{current ? dots : done ? '' : ''}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Bottom hint */}
+        <p style={{
+          margin: 0, textAlign: 'center',
+          fontSize: 11, fontWeight: 500,
+          letterSpacing: '0.08em', textTransform: 'uppercase',
+          color: '#c4c1be',
+          animation: 'loaderPulse 2s ease-in-out infinite',
+        }}>
+          HelpLink
+        </p>
+      </div>
     </div>
-    <style>{`@keyframes circSpin { to { transform: rotate(360deg); } }`}</style>
-  </div>
-);
+  );
+};
 
 // ── Status Banner ─────────────────────────────────────────────────────────────
 const StatusBanner = ({ status, onDismiss }) => {
@@ -237,6 +327,118 @@ const BackButton = ({ onClick }) => (
   </button>
 );
 
+// ── Bottom Action Bar ─────────────────────────────────────────────────────────
+const BottomActionBar = ({ onRequestHelp, onRefresh, refreshing }) => (
+  <div
+    style={{
+      position: 'absolute',
+      bottom: 32,
+      left: '50%',
+      transform: 'translateX(-50%)',
+      zIndex: 1000,
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      padding: '7px 8px',
+      background: 'rgba(255,255,255,0.96)',
+      backdropFilter: 'blur(24px)',
+      WebkitBackdropFilter: 'blur(24px)',
+      borderRadius: 999,
+      border: '1px solid rgba(28,25,23,0.09)',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)',
+      fontFamily: "'DM Sans','Helvetica Neue',sans-serif",
+      whiteSpace: 'nowrap',
+    }}
+  >
+    {/* Request Help */}
+    <button
+      onClick={onRequestHelp}
+      aria-label="Request help"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        padding: '10px 22px',
+        borderRadius: 999,
+        border: 'none',
+        background: '#dc2626',
+        color: '#fff',
+        fontSize: 13,
+        fontWeight: 700,
+        letterSpacing: '0.02em',
+        cursor: 'pointer',
+        boxShadow: '0 4px 18px rgba(220,38,38,0.35)',
+        transition: 'background 0.15s, box-shadow 0.15s, transform 0.1s',
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.background = '#b91c1c';
+        e.currentTarget.style.boxShadow = '0 6px 24px rgba(220,38,38,0.45)';
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.background = '#dc2626';
+        e.currentTarget.style.boxShadow = '0 4px 18px rgba(220,38,38,0.35)';
+      }}
+      onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.95)'; }}
+      onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+    >
+      {/* SOS bell icon */}
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+      Request Help
+    </button>
+
+    {/* Divider */}
+    <div style={{ width: 1, height: 24, background: 'rgba(28,25,23,0.1)', flexShrink: 0 }} />
+
+    {/* Refresh */}
+    <button
+      onClick={onRefresh}
+      aria-label="Refresh map"
+      title="Refresh nearby requests"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 7,
+        padding: '10px 18px',
+        borderRadius: 999,
+        border: 'none',
+        background: 'transparent',
+        color: '#78716c',
+        fontSize: 12,
+        fontWeight: 600,
+        letterSpacing: '0.02em',
+        cursor: refreshing ? 'default' : 'pointer',
+        transition: 'color 0.15s, transform 0.1s',
+      }}
+      onMouseEnter={e => { if (!refreshing) e.currentTarget.style.color = '#1c1917'; }}
+      onMouseLeave={e => { e.currentTarget.style.color = '#78716c'; }}
+      onMouseDown={e => { if (!refreshing) e.currentTarget.style.transform = 'scale(0.93)'; }}
+      onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+    >
+      <svg
+        width="14" height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{
+          flexShrink: 0,
+          animation: refreshing ? 'refreshSpin 0.7s linear infinite' : 'none',
+          transformOrigin: 'center',
+        }}
+      >
+        <polyline points="23 4 23 10 17 10"/>
+        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+      </svg>
+      Refresh
+    </button>
+  </div>
+);
+
 // ── Main component ────────────────────────────────────────────────────────────
 const MapView = () => {
   const { requests, fetchNearbyRequests, requestStatus } = useRequests();
@@ -250,10 +452,11 @@ const MapView = () => {
   const [nearbyUsers,     setNearbyUsers]     = useState([]);
   const [nearestUserId,   setNearestUserId]   = useState(null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [refreshing,      setRefreshing]      = useState(false);
 
   const didInitialFetchRef  = useRef(false);
   const userLocationRef     = useRef(null);
-  const latestSocketReqRef  = useRef(null); // tracks last socket-pushed request id
+  const latestSocketReqRef  = useRef(null);
 
   useEffect(() => {
     setBannerDismissed(false);
@@ -281,7 +484,6 @@ const MapView = () => {
       return;
     }
 
-    // Fallback: if geolocation takes > 6 s, show the map at Prayagraj centre
     const fallback = setTimeout(() => {
       if (loading) {
         setLoading(false);
@@ -297,8 +499,6 @@ const MapView = () => {
         updateLocation([longitude, latitude]);
         fetchNearbyRequests(longitude, latitude);
         fetchNearby(latitude, longitude);
-        // Set location and clear loader together so MapContainer already
-        // has the right centre before it mounts — no jump.
         setUserLocation([latitude, longitude]);
         setLoading(false);
       },
@@ -334,7 +534,6 @@ const MapView = () => {
     const latest = [...requests].sort(
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
     )[0];
-    // Only fly if this is a request we haven't panned to yet
     if (latest?.location?.coordinates && latest._id !== latestSocketReqRef.current) {
       latestSocketReqRef.current = latest._id;
       const [lng, lat] = latest.location.coordinates;
@@ -348,7 +547,7 @@ const MapView = () => {
     const handleNewRequest = (data) => {
       const req = data?.request;
       if (!req?.location?.coordinates) return;
-      if (latestSocketReqRef.current === req._id) return; // already panned
+      if (latestSocketReqRef.current === req._id) return;
       latestSocketReqRef.current = req._id;
       const [lng, lat] = req.location.coordinates;
       map.flyTo([lat, lng], 15, { duration: 1.2 });
@@ -356,6 +555,26 @@ const MapView = () => {
     socket.on('new_request', handleNewRequest);
     return () => socket.off('new_request', handleNewRequest);
   }, [socket, map]);
+
+  // ── Refresh handler ──────────────────────────────────────────────────────
+  const handleRefresh = useCallback(async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    const loc = userLocationRef.current;
+    const [lng, lat] = loc
+      ? [loc[1], loc[0]]
+      : [PRAYAGRAJ_CENTER[1], PRAYAGRAJ_CENTER[0]];
+    try {
+      await Promise.all([
+        fetchNearbyRequests(lng, lat),
+        loc ? fetchNearby(loc[0], loc[1]) : Promise.resolve(),
+      ]);
+    } catch (err) {
+      console.error('Refresh error:', err);
+    } finally {
+      setTimeout(() => setRefreshing(false), 600);
+    }
+  }, [refreshing, fetchNearbyRequests, fetchNearby]);
 
   const userIcon = L.divIcon({
     className: '',
@@ -382,8 +601,8 @@ const MapView = () => {
     popupAnchor: [0, -66],
   });
 
-  const highCount   = requests.filter(r => r.urgency === 'high').length;
-  const showBanner  = false;
+  const highCount  = requests.filter(r => r.urgency === 'high').length;
+  const showBanner = false;
 
   if (loading) return <MinimalLoader />;
 
@@ -610,16 +829,23 @@ const MapView = () => {
         )}
       </div>
 
+      {/* ── Bottom Action Bar ── */}
+      <BottomActionBar
+        onRequestHelp={() => navigate('/')}
+        onRefresh={handleRefresh}
+        refreshing={refreshing}
+      />
 
       {/* ── Global styles ── */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&display=swap');
 
-        @keyframes spin        { to { transform: rotate(360deg); } }
-        @keyframes circSpin    { to { transform: rotate(360deg); } }
-        @keyframes blink       { 0%,100%{opacity:1;}50%{opacity:0.3;} }
-        @keyframes sosPulse    { 0%{box-shadow:0 0 0 0 rgba(220,38,38,0.5);}70%{box-shadow:0 0 0 10px rgba(220,38,38,0);}100%{box-shadow:0 0 0 0 rgba(220,38,38,0);} }
-        @keyframes bannerPulse { 0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(0.8);} }
+        @keyframes spin          { to { transform: rotate(360deg); } }
+        @keyframes circSpin      { to { transform: rotate(360deg); } }
+        @keyframes refreshSpin   { to { transform: rotate(360deg); } }
+        @keyframes blink         { 0%,100%{opacity:1;}50%{opacity:0.3;} }
+        @keyframes sosPulse      { 0%{box-shadow:0 0 0 0 rgba(220,38,38,0.5);}70%{box-shadow:0 0 0 10px rgba(220,38,38,0);}100%{box-shadow:0 0 0 0 rgba(220,38,38,0);} }
+        @keyframes bannerPulse   { 0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(0.8);} }
 
         .leaflet-popup-content-wrapper {
           border-radius: 18px !important;

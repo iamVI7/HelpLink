@@ -16,9 +16,7 @@ if (storedToken) {
   api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
 }
 
-// 🔁 MODIFIED (FIX 8) — always read fresh token from localStorage on every request
-// ❌ REMOVED: const alreadySet = api.defaults.headers.common['Authorization'];
-// ❌ REMOVED: if (!alreadySet) { ... } guard that caused stale token issues
+// 🔁 Always read fresh token from localStorage on every request
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -56,7 +54,6 @@ export const getMyAcceptedRequests = ()         => api.get('/requests/my-accepte
 export const acceptRequest         = (id)       => api.patch(`/requests/${id}/accept`);
 export const completeRequest       = (id)       => api.patch(`/requests/${id}/complete`);
 export const rateHelper            = (id, data) => api.post(`/requests/${id}/rate`, data);
-// ✅ update / enhance a request
 export const updateRequest         = (id, data) => api.put(`/requests/${id}`, data);
 
 // ─────────────────────────────────────────────
@@ -80,25 +77,32 @@ export const sendOTP   = (phoneNumber)      => api.post('/auth/send-otp', { phon
 export const verifyOTP = (phoneNumber, otp) => api.post('/auth/verify-otp', { phoneNumber, otp });
 
 // ─────────────────────────────────────────────
-// ✅ NEW — AFTERCARE BRIDGE APIs
-// sendToAftercare  : works for both guests and logged-in users
-// sendMedicalProfile: only called after explicit user consent (logged-in only)
+// ✅ AFTERCARE BRIDGE APIs
 // ─────────────────────────────────────────────
 
 /**
- * Send basic incident data to UniCare.
- * Works for both guests (no token) and logged-in users (token sent automatically).
- * @param {string} id - The request / SOS id
+ * Send aftercare data to UniCare.
+ * NOW accepts an optional payload object (consent flags + userNote).
+ * If no payload is passed the call still works exactly as before (backward compat).
+ *
+ * @param {string} id       - HelpLink request MongoDB _id
+ * @param {object} payload  - consent flags + userNote built by AftercareButton
  */
-export const sendToAftercare = (id) =>
-  api.post(`/requests/${id}/aftercare`);
+export const sendToAftercare = (id, payload = {}) =>
+  api.post(`/requests/${id}/aftercare`, payload);
 
 /**
  * Send the user's full medical profile to UniCare.
- * MUST only be called after the user explicitly clicks "Yes, import my profile".
- * Requires a valid JWT — guests cannot call this.
+ * Only called after explicit user consent. Requires JWT.
  */
 export const sendMedicalProfile = () =>
   api.post('/requests/aftercare/profile');
+
+// ─────────────────────────────────────────────
+// ✅ Aftercare user-id helper (unchanged)
+// ─────────────────────────────────────────────
+export const storeHlUserId = (userId) => {
+  if (userId) localStorage.setItem('hlUserId', String(userId));
+};
 
 export default api;

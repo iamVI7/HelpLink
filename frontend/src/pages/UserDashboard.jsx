@@ -703,17 +703,36 @@ const UserDashboard = () => {
                           ))}
                         </div>
 
-                        <div className="flex items-center gap-0.5">
-                          {['active', 'completed'].map(s => (
-                            <button
-                              key={s}
-                              onClick={() => handleFilterSwitch(s)}
-                              className={`filter-chip ${statusFilter === s ? 'active' : 'inactive'}`}
-                            >
-                              {s}
-                            </button>
-                          ))}
-                        </div>
+                        <div className="relative">
+  <select
+    value={statusFilter}
+    onChange={(e) => handleFilterSwitch(e.target.value)}
+    style={{
+      appearance: 'none',
+      WebkitAppearance: 'none',
+      background: '#ede9e4',
+      border: 'none',
+      borderRadius: 100,
+      padding: '5px 28px 5px 12px',
+      fontSize: 10,
+      fontWeight: 700,
+      letterSpacing: '0.06em',
+      textTransform: 'uppercase',
+      color: '#44403c',
+      cursor: 'pointer',
+      outline: 'none',
+    }}
+  >
+    <option value="active">Active</option>
+    <option value="completed">Completed</option>
+  </select>
+  <svg
+    width="10" height="10" viewBox="0 0 10 10" fill="none"
+    style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
+  >
+    <path d="M2 3.5l3 3 3-3" stroke="#78716c" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+</div>
                       </div>
 
                       {/* Sliding content */}

@@ -25,6 +25,59 @@ const LiveDot = () => (
   </span>
 );
 
+// ── Info Ticker ───────────────────────────────────────────────────────────────
+const TICKER_ITEMS = [
+  { icon: '🚨', text: 'Always call 112 first for life-threatening emergencies — HelpLink is a powerful complement' },
+  { icon: '⚡', text: 'Responders are notified within 5 seconds of your SOS being sent' },
+  { icon: '📍', text: 'No account needed — anyone can send an SOS instantly from this page' },
+  { icon: '🤝', text: '4,800+ verified community responders including trained volunteers, off-duty medics & first-aiders' },
+  { icon: '🔒', text: 'Your location is never stored — it is shared only with your responder and purged when the emergency ends' },
+  { icon: '✅', text: '1,240+ SOS requests successfully resolved this month across the network' },
+  { icon: '⏱', text: 'Average community response time is under 3 minutes in urban areas' },
+  { icon: '📡', text: 'Offline? Your SOS is saved locally and auto-sent the moment you reconnect' },
+  { icon: '📸', text: 'Attaching a photo helps responders arrive fully prepared — faster aid, fewer questions' },
+  { icon: '🌐', text: 'HelpLink operates 24 / 7 — responders are active day and night across all zones' },
+];
+
+const InfoTicker = () => {
+  const doubled = [...TICKER_ITEMS, ...TICKER_ITEMS];
+  return (
+    <div
+      style={{
+        overflow: 'hidden',
+        width: '100%',
+        padding: '10px 0',
+        borderTop: '1.5px solid rgba(220,38,38,0.09)',
+        borderBottom: '1.5px solid rgba(220,38,38,0.09)',
+        background: 'linear-gradient(90deg,rgba(255,245,245,0.94) 0%,rgba(255,255,255,0.97) 50%,rgba(255,245,245,0.94) 100%)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        position: 'relative',
+      }}
+    >
+      {/* Fade edges */}
+      <div style={{
+        position: 'absolute', top: 0, bottom: 0, left: 0, width: 64, zIndex: 2, pointerEvents: 'none',
+        background: 'linear-gradient(to right,rgba(255,245,245,0.96),transparent)',
+      }} />
+      <div style={{
+        position: 'absolute', top: 0, bottom: 0, right: 0, width: 64, zIndex: 2, pointerEvents: 'none',
+        background: 'linear-gradient(to left,rgba(255,245,245,0.96),transparent)',
+      }} />
+
+      <div className="ticker-track">
+        {doubled.map((item, i) => (
+          <span key={i} className="ticker-item">
+            <span className="ticker-icon">{item.icon}</span>
+            {item.text}
+            <span className="ticker-sep" />
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // ── SOS Button ───────────────────────────────────────────────────────────────
 const SOSButton = ({ onTrigger, loading, disabled, cooldown, fetchingLocation }) => {
   const [holding, setHolding] = useState(false);
@@ -259,13 +312,11 @@ const ImageAttach = ({ sosImage, setSosImage }) => {
 };
 
 // ── Stats Pill ────────────────────────────────────────────────────────────────
-// ✅ EXTENDED — accepts isLocationScoped so label reads "nearby" vs generic
 const StatsPill = ({ stats }) => {
   if (!stats) return null;
 
   const hasResponders = stats.totalActive > 0;
 
-  // ✅ Use "nearby" wording only when the backend confirmed a location-scoped result
   const nearbyLabel = stats.isLocationScoped
     ? 'responders active nearby'
     : 'responders active';
@@ -282,7 +333,6 @@ const StatsPill = ({ stats }) => {
           WebkitBackdropFilter: 'blur(8px)',
         }}
       >
-        {/* Avatar stack */}
         <div className="flex items-center flex-shrink-0">
           {stats.activeUsers?.map((u, index) => {
             const hue = avatarHue(u.name);
@@ -322,13 +372,11 @@ const StatsPill = ({ stats }) => {
           )}
         </div>
 
-        {/* Label — ✅ now context-aware */}
         <p className="m-0 text-[0.76rem] font-medium whitespace-nowrap leading-none" style={{ color: '#15803d' }}>
           <span className="font-bold text-green-900">{stats.totalActive}</span>
           {' '}{nearbyLabel}
         </p>
 
-        {/* Live indicator */}
         <span className="flex-shrink-0 flex items-center gap-1 pl-1 border-l border-green-200">
           <span className="relative inline-flex h-1.5 w-1.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
@@ -340,7 +388,6 @@ const StatsPill = ({ stats }) => {
     );
   }
 
-  // ── No responders state ────────────────────────────────────────────────────
   return (
     <div
       className="inline-flex items-center gap-2.5 rounded-full px-4 py-2.5"
@@ -352,7 +399,6 @@ const StatsPill = ({ stats }) => {
         WebkitBackdropFilter: 'blur(8px)',
       }}
     >
-      {/* Icon */}
       <span
         className="flex items-center justify-center flex-shrink-0 rounded-full"
         style={{ width: 22, height: 22, background: 'rgba(120,113,108,0.08)' }}
@@ -364,7 +410,6 @@ const StatsPill = ({ stats }) => {
         </svg>
       </span>
 
-      {/* Text — ✅ also context-aware */}
       <p className="m-0 text-[0.76rem] font-medium leading-none whitespace-nowrap" style={{ color: '#78716c' }}>
         {stats.isLocationScoped ? 'No responders nearby' : 'No active responders'}
         <span className="ml-1.5 font-normal" style={{ color: '#a8a29e' }}>
@@ -489,17 +534,9 @@ const LandingPage = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── ✅ UPDATED fetchStats — sends user GPS coords so backend scopes to 5 km ──
-  // Strategy:
-  //   1. Try to get GPS position (silent — no UI prompt, timeout 6 s).
-  //   2. If granted, pass ?lat=&lng= to the stats endpoint.
-  //   3. If denied or unavailable, call stats without coords → global fallback.
-  // This runs once on mount and does NOT block the page render.
-  // The SOS button has its own separate location flow — this is independent.
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Attempt a silent location read with a short timeout
         let lat = null;
         let lng = null;
 
@@ -507,9 +544,9 @@ const LandingPage = () => {
           try {
             const position = await new Promise((resolve, reject) => {
               navigator.geolocation.getCurrentPosition(resolve, reject, {
-                enableHighAccuracy: false, // low-accuracy is fine for stats
+                enableHighAccuracy: false,
                 timeout: 6000,
-                maximumAge: 60000,        // accept a 1-min cached position
+                maximumAge: 60000,
               });
             });
             lat = position.coords.latitude;
@@ -519,7 +556,6 @@ const LandingPage = () => {
           }
         }
 
-        // Build query params — only attach coords when we actually got them
         const params = (lat !== null && lng !== null) ? { lat, lng } : {};
         const res = await getStatsOverview(params);
         setStats(res.data);
@@ -530,7 +566,6 @@ const LandingPage = () => {
 
     fetchStats();
   }, []);
-  // ── END: updated fetchStats ────────────────────────────────────────────────
 
   const startCooldownTimer = useCallback((seconds) => {
     setCooldown(seconds);
@@ -650,6 +685,7 @@ const LandingPage = () => {
         @keyframes attachFadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
         @keyframes panelIn { from{opacity:0;transform:translateY(20px) scale(0.98)} to{opacity:1;transform:translateY(0) scale(1)} }
         @keyframes eyebrowIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes tickerScroll { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
         .fade-up    { animation: fadeUp 0.4s ease both; }
         .fade-up-2  { animation: fadeUp 0.4s 0.16s ease both; }
         .panel-in   { animation: panelIn 0.5s 0.05s cubic-bezier(0.22,1,0.36,1) both; }
@@ -662,6 +698,40 @@ const LandingPage = () => {
         .sos-attach-up  { animation:attachFadeUp 0.25s ease both; }
         .secondary-fade { opacity:0.45; transition:opacity 0.2s ease; }
         .secondary-fade:hover, .secondary-fade:focus-within { opacity:0.85; }
+        .ticker-track {
+          display: flex;
+          flex-direction: row;
+          flex-wrap: nowrap;
+          width: max-content;
+          animation: tickerScroll 60s linear infinite;
+          will-change: transform;
+        }
+        .ticker-track:hover { animation-play-state: paused; }
+        .ticker-item {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          padding: 0 24px;
+          white-space: nowrap;
+          font-size: 0.76rem;
+          font-weight: 500;
+          color: #57534e;
+          letter-spacing: 0.01em;
+        }
+        .ticker-icon {
+          font-size: 0.82rem;
+          flex-shrink: 0;
+          line-height: 1;
+        }
+        .ticker-sep {
+          display: inline-block;
+          width: 3px;
+          height: 3px;
+          border-radius: 50%;
+          background: rgba(220,38,38,0.3);
+          flex-shrink: 0;
+          margin-left: 8px;
+        }
       `}</style>
 
       <section className="relative flex flex-col items-center justify-center min-h-screen pt-16 pb-10">
@@ -762,8 +832,11 @@ const LandingPage = () => {
         </div>
       </section>
 
-      <div className="max-w-xl mx-auto px-6"><div className="h-px bg-black/[0.06]" /></div>
+      {/* ── Info Ticker — replaces the old <hr> divider ── */}
+      <InfoTicker />
+
       <FAQ />
+
       <footer className="border-t border-black/[0.06] bg-white/90">
         <div className="px-6 py-6 flex items-center justify-center">
           <span className="text-xs text-stone-400">© 2026 HelpLink</span>

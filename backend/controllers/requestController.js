@@ -849,6 +849,15 @@ const trackByPublicId = async (req, res) => {
 // @desc    Send basic incident data to UniCare aftercare endpoint
 // @route   POST /api/requests/:id/aftercare
 // @access  Public (guests + logged-in users)
+// ─────────────────────────────────────────────────────────────────────────────
+// REPLACE only the sendToAftercare function in:
+// helplink/backend/controllers/requestController.js
+//
+// FIX: Now reads consent + userNote from req.body and forwards them
+// to UniCare so they get saved on the AftercareCase document.
+// Previously the function built its own payload and ignored req.body fields.
+// ─────────────────────────────────────────────────────────────────────────────
+
 const sendToAftercare = async (req, res) => {
   try {
     const request = await Request.findById(req.params.id);
@@ -856,37 +865,6 @@ const sendToAftercare = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Request not found' });
     }
 
-    let payload;
-
-    if (req.user) {
-      // ── Logged-in user ────────────────────────────────────────────────
-      // Check whether this user has an EmergencyProfile
-      const EmergencyProfile = require('../models/EmergencyProfile');
-      const profile = await EmergencyProfile.findOne({ user: req.user._id });
-
-      payload = {
-        userId:              req.user._id,
-        name:                req.user.name,
-        incidentType:        request.category || 'unknown',
-        notes:               request.description || '',
-        location:            request.location || null,
-        time:                request.createdAt,
-        hasEmergencyProfile: !!profile,
-        source:              'helplink',
-      };
-    } else {
-      // ── Guest user ────────────────────────────────────────────────────
-      payload = {
-        name:         'Guest User',
-        incidentType: request.category || 'unknown',
-        notes:        request.description || '',
-        location:     request.location || null,
-        time:         request.createdAt,
-        source:       'helplink',
-      };
-    }
-
-    // Guard: UNICARE_API must be set in .env
     const unicareBase = process.env.UNICARE_API;
     if (!unicareBase) {
       console.error('sendToAftercare: UNICARE_API is not set in .env');
@@ -894,6 +872,59 @@ const sendToAftercare = async (req, res) => {
         success: false,
         message: 'Aftercare service is not configured on this server.',
       });
+    }
+
+    // ── Read consent + userNote forwarded from the frontend ───────────────
+    // These come from AftercareButton.buildPayload via the POST body.
+    const consentFromBody  = req.body?.consent  || null;
+    const userNoteFromBody = req.body?.userNote  || '';
+    const isAnonymous      = req.body?.anonymous || false;
+
+    // ── Build payload ─────────────────────────────────────────────────────
+    let payload;
+
+    if (req.user) {
+      const EmergencyProfile = require('../models/EmergencyProfile');
+      const profile = await EmergencyProfile.findOne({ user: req.user._id });
+
+      payload = {
+        requestId:           String(request._id),
+        userId:              isAnonymous ? null : String(req.user._id),
+        guestId:             null,
+        // Respect contact consent: if contact=false don't send real name
+        name:                (consentFromBody?.contact === false || isAnonymous)
+                               ? 'Anonymous'
+                               : req.user.name,
+        incidentType:        request.category    || 'unknown',
+        notes:               request.description || '',
+        // Respect location consent: if location=false send null
+        location:            consentFromBody?.location === false
+                               ? null
+                               : (request.location || null),
+        time:                request.createdAt,
+        hasEmergencyProfile: !!profile,
+        source:              'helplink',
+        // ✅ Forward consent + userNote to UniCare
+        consent:             consentFromBody,
+        userNote:            userNoteFromBody,
+      };
+    } else {
+      payload = {
+        requestId:    String(request._id),
+        userId:       null,
+        guestId:      request.guestId || null,
+        name:         isAnonymous ? 'Anonymous' : 'Guest User',
+        incidentType: request.category    || 'unknown',
+        notes:        request.description || '',
+        location:     consentFromBody?.location === false
+                        ? null
+                        : (request.location || null),
+        time:         request.createdAt,
+        source:       'helplink',
+        // ✅ Forward consent + userNote to UniCare
+        consent:      consentFromBody,
+        userNote:     userNoteFromBody,
+      };
     }
 
     const unicareRes = await axios.post(
@@ -909,9 +940,11 @@ const sendToAftercare = async (req, res) => {
     );
 
     return res.json({
-      success: true,
-      message: 'Aftercare data sent successfully',
-      data:    unicareRes.data,
+      success:   true,
+      message:   'Aftercare data sent successfully',
+      data:      unicareRes.data,
+      isGuest:   !req.user,
+      requestId: String(request._id),
     });
 
   } catch (error) {

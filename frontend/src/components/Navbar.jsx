@@ -174,8 +174,10 @@ const Navbar = () => {
   const avatarFg     = `hsl(${hue} 60% 32%)`;
   const avatarBorder = `hsl(${hue} 45% 78%)`;
 
+  const isAdmin = user?.role === 'admin'; // ✅ local helper for readability
+
   const navLinks =
-    user?.role === 'admin'
+    isAdmin
       ? [{ to: '/dashboard', label: 'Dashboard' }]
       : [
           { to: '/dashboard', label: 'Dashboard' },
@@ -280,20 +282,22 @@ const Navbar = () => {
               </div>
             </div>
 
-            {/* Availability toggle */}
-            <button
-              onClick={handleAvailabilityToggle}
-              className={`
-                hidden sm:inline-flex items-center gap-1.5
-                px-2.5 py-1 text-xs font-bold tracking-widest uppercase rounded-full border transition-all duration-150
-                ${user.isAvailable
-                  ? 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100 hover:border-green-300'
-                  : 'border-stone-200 bg-stone-50 text-stone-500 hover:bg-stone-100'}
-              `}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full transition-colors ${user.isAvailable ? 'bg-green-500' : 'bg-stone-400'}`} />
-              {user.isAvailable ? 'Available' : 'Away'}
-            </button>
+            {/* ✅ Availability toggle — hidden for admin */}
+            {!isAdmin && (
+              <button
+                onClick={handleAvailabilityToggle}
+                className={`
+                  hidden sm:inline-flex items-center gap-1.5
+                  px-2.5 py-1 text-xs font-bold tracking-widest uppercase rounded-full border transition-all duration-150
+                  ${user.isAvailable
+                    ? 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100 hover:border-green-300'
+                    : 'border-stone-200 bg-stone-50 text-stone-500 hover:bg-stone-100'}
+                `}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full transition-colors ${user.isAvailable ? 'bg-green-500' : 'bg-stone-400'}`} />
+                {user.isAvailable ? 'Available' : 'Away'}
+              </button>
+            )}
 
             {/* Verify button */}
             {user.role !== 'admin' && !user.isVerified && (
@@ -359,10 +363,10 @@ const Navbar = () => {
                     </span>
                   </div>
                   <span
-                    className={`text-xs font-bold uppercase tracking-widest leading-none ${user.role === 'admin' ? 'text-amber-600' : 'text-stone-400'}`}
+                    className={`text-xs font-bold uppercase tracking-widest leading-none ${isAdmin ? 'text-amber-600' : 'text-stone-400'}`}
                     style={{ fontSize: '0.6rem' }}
                   >
-                    {user.role === 'admin' ? 'Admin' : 'Member'}
+                    {isAdmin ? 'Admin' : 'Member'}
                   </span>
                 </div>
                 <svg
@@ -377,8 +381,8 @@ const Navbar = () => {
               {dropdownOpen && (
                 <div className="drop-in absolute right-0 top-[calc(100%+12px)] w-64 bg-white border border-stone-200 rounded-2xl shadow-xl z-50 overflow-hidden">
 
-                  {/* ── User header — clickable → /profile (non-admin only) ── */}
-                  {user.role !== 'admin' ? (
+                  {/* ── User header ── */}
+                  {!isAdmin ? (
                     <Link
                       to="/profile"
                       onClick={() => setDropdownOpen(false)}
@@ -439,7 +443,7 @@ const Navbar = () => {
                       </div>
                     </Link>
                   ) : (
-                    /* Admin header — not clickable */
+                    /* Admin header */
                     <div className="px-4 pt-4 pb-3.5 border-b border-stone-100">
                       <div className="flex items-center gap-3">
                         <div className="relative shrink-0">
@@ -449,10 +453,6 @@ const Navbar = () => {
                           >
                             {initials(user.name)}
                           </div>
-                          <span
-                            className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white"
-                            style={{ background: user.isAvailable ? '#22c55e' : '#a8a29e' }}
-                          />
                         </div>
                         <div className="min-w-0 flex-1">
                           <span className="serif text-sm font-semibold text-stone-900 truncate leading-tight block min-w-0">
@@ -470,7 +470,7 @@ const Navbar = () => {
                   )}
 
                   {/* Rating — user only */}
-                  {user.role !== 'admin' && (
+                  {!isAdmin && (
                     <UserRating rating={user.rating} totalRatings={user.totalRatings} />
                   )}
 
@@ -496,26 +496,28 @@ const Navbar = () => {
                     })}
                   </div>
 
-                  {/* Mobile availability toggle */}
-                  <div className="sm:hidden border-b border-stone-100 px-4 py-3.5">
-                    <button
-                      onClick={() => { handleAvailabilityToggle(); setTimeout(() => setDropdownOpen(false), 320); }}
-                      className="w-full flex items-center justify-between"
-                    >
-                      <div className="flex flex-col items-start gap-0.5">
-                        <span className="text-xs font-semibold text-stone-700">Availability</span>
-                        <span className={`text-[10px] font-bold uppercase tracking-widest ${user.isAvailable ? 'text-green-600' : 'text-stone-400'}`}>
-                          {user.isAvailable ? "You're available" : "You're away"}
-                        </span>
-                      </div>
-                      <div className={`avail-track ${user.isAvailable ? 'on' : 'off'}`}>
-                        <div className="avail-thumb" />
-                      </div>
-                    </button>
-                  </div>
+                  {/* ✅ Mobile availability toggle — hidden for admin */}
+                  {!isAdmin && (
+                    <div className="sm:hidden border-b border-stone-100 px-4 py-3.5">
+                      <button
+                        onClick={() => { handleAvailabilityToggle(); setTimeout(() => setDropdownOpen(false), 320); }}
+                        className="w-full flex items-center justify-between"
+                      >
+                        <div className="flex flex-col items-start gap-0.5">
+                          <span className="text-xs font-semibold text-stone-700">Availability</span>
+                          <span className={`text-[10px] font-bold uppercase tracking-widest ${user.isAvailable ? 'text-green-600' : 'text-stone-400'}`}>
+                            {user.isAvailable ? "You're available" : "You're away"}
+                          </span>
+                        </div>
+                        <div className={`avail-track ${user.isAvailable ? 'on' : 'off'}`}>
+                          <div className="avail-thumb" />
+                        </div>
+                      </button>
+                    </div>
+                  )}
 
                   {/* Mobile verify — only when not yet verified */}
-                  {user.role !== 'admin' && !user.isVerified && (
+                  {!isAdmin && !user.isVerified && (
                     <div className="border-b border-stone-100 px-3 py-3">
                       <button
                         onClick={() => { setDropdownOpen(false); setVerifyModal(true); }}

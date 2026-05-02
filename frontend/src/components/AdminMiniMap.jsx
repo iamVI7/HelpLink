@@ -4,13 +4,13 @@ import L from 'leaflet';
 import { useRequests } from '../context/RequestContext';
 import 'leaflet/dist/leaflet.css';
 
-// 📍 Geofencing (UP) — unchanged
-const UP_BOUNDS = [
-  [23.8, 77.0],
-  [30.4, 84.5],
+// 📍 Geofencing — Prayagraj only (tight bounding box, matches MapView exactly)
+const PRAYAGRAJ_BOUNDS = [
+  [25.30, 81.70],
+  [25.55, 82.00],
 ];
 
-// 📍 Default center (Prayagraj) — unchanged
+// 📍 Default center — Prayagraj
 const PRAYAGRAJ_CENTER = [25.4358, 81.8463];
 
 // Fix default marker icons — unchanged
@@ -21,7 +21,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl:     'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
-// ── Marker icons — now matches MapView's getMarkerIcon exactly ───────────────
+// ── Marker icons — matches MapView's getMarkerIcon exactly ───────────────────
 const getMarkerIcon = (req) => {
   if (req.isSOS) {
     return L.divIcon({
@@ -126,12 +126,12 @@ const AdminMiniMap = () => {
     const [lng, lat] = latest.location.coordinates;
 
     setTimeout(() => {
-      mapRef.current.flyTo([lat, lng], 6, { duration: 1.2 });
+      mapRef.current.flyTo([lat, lng], 15, { duration: 1.2 });
     }, 150);
   }, [allRequests]);
 
   return (
-    <div style={{ position: 'relative', width: '100%' }}>
+    <div className="relative w-full">
       {/* Global keyframes — SOS pulse + tile fade */}
       <style>{`
         @keyframes sosPulse {
@@ -174,10 +174,8 @@ const AdminMiniMap = () => {
         .helplink-map .leaflet-control-zoom a:last-child { border-bottom: none !important; }
         .helplink-map .leaflet-control-zoom a:hover { background: #fff7f0 !important; color: #dc2626 !important; }
 
-        /* Tile fade-in */
         .helplink-map .leaflet-tile { transition: opacity 0.35s ease !important; }
 
-        /* Popup — same rounded treatment as MapView */
         .helplink-map .leaflet-popup-content-wrapper {
           border-radius: 18px !important;
           padding: 0 !important;
@@ -189,31 +187,27 @@ const AdminMiniMap = () => {
         .helplink-map .leaflet-popup-content       { margin: 0 !important; width: auto !important; }
         .helplink-map .leaflet-popup-tip-container { display: none !important; }
         .helplink-map .leaflet-fade-anim .leaflet-popup { transition: opacity 0.2s ease !important; }
+
+        /* Match MapView — hide default zoom controls (zoom shown via zoomControl prop) */
+        .helplink-map .leaflet-control-zoom { display: block !important; }
       `}</style>
 
       <div
-        className="helplink-map"
-        style={{
-          width: '100%',
-          height: 360,
-          borderRadius: 16,
-          overflow: 'hidden',
-          border: '1px solid rgba(0,0,0,0.07)',
-          boxShadow: '0 2px 16px rgba(0,0,0,0.06)',
-          position: 'relative',
-        }}
+        className="helplink-map w-full rounded-2xl overflow-hidden border border-black/[0.07] shadow-sm relative"
+        style={{ height: 360 }}
       >
         <MapContainer
           center={PRAYAGRAJ_CENTER}
-          zoom={6}
+          zoom={13}
           style={{ height: '100%', width: '100%', background: '#f5f0eb' }}
           whenCreated={(map) => (mapRef.current = map)}
           zoomControl={true}
-          maxBounds={UP_BOUNDS}
-          maxBoundsViscosity={0.9}
-          minZoom={6}
+          // ── Geofencing: tight Prayagraj box, matches MapView exactly ──
+          maxBounds={PRAYAGRAJ_BOUNDS}
+          maxBoundsViscosity={1.0}
+          minZoom={11}
+          maxZoom={18}
         >
-          {/* ── Same OpenStreetMap tile as MapView ── */}
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -233,7 +227,6 @@ const AdminMiniMap = () => {
                 ]}
                 icon={getMarkerIcon(req)}
               >
-                {/* ── Popup — same structure as MapView ── */}
                 <Popup closeButton={false}>
                   <div
                     style={{
@@ -295,14 +288,8 @@ const AdminMiniMap = () => {
         {/* Subtle inner vignette — original */}
         <div
           aria-hidden="true"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            pointerEvents: 'none',
-            zIndex: 500,
-            borderRadius: 16,
-            boxShadow: 'inset 0 0 32px rgba(245,240,235,0.45)',
-          }}
+          className="absolute inset-0 pointer-events-none z-[500] rounded-2xl"
+          style={{ boxShadow: 'inset 0 0 32px rgba(245,240,235,0.45)' }}
         />
       </div>
     </div>

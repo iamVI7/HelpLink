@@ -4,9 +4,9 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 // ── Bounds & defaults ──────────────────────────────────────────────────────────
-const UP_BOUNDS = [
-  [23.8, 77.0],
-  [30.4, 84.5],
+const PRAYAGRAJ_BOUNDS = [
+  [25.30, 81.70],
+  [25.55, 82.00],
 ];
 const PRAYAGRAJ_CENTER = [25.4358, 81.8463];
 
@@ -42,8 +42,12 @@ const LocationMarkerComponent = ({ onLocationSelect, externalPosition }) => {
   useMapEvents({
     click(e) {
       const { lat, lng } = e.latlng;
-      if (lat < 23.8 || lat > 30.4 || lng < 77.0 || lng > 84.5) {
-        alert('Service currently limited to Uttar Pradesh');
+      // Guard: only accept clicks within Prayagraj bounds
+      if (
+        lat < PRAYAGRAJ_BOUNDS[0][0] || lat > PRAYAGRAJ_BOUNDS[1][0] ||
+        lng < PRAYAGRAJ_BOUNDS[0][1] || lng > PRAYAGRAJ_BOUNDS[1][1]
+      ) {
+        alert('Service is currently limited to Prayagraj');
         return;
       }
       setPosition([lat, lng]);
@@ -162,7 +166,7 @@ const MapLocationPicker = ({ onLocationSelect, height = '300px', markerPosition 
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
           </svg>
-          Service is currently limited to Uttar Pradesh
+          Service is currently limited to Prayagraj
         </div>
       )}
 
@@ -185,9 +189,10 @@ const MapLocationPicker = ({ onLocationSelect, height = '300px', markerPosition 
           center={defaultPosition ?? PRAYAGRAJ_CENTER}
           zoom={13}
           className="w-full h-full"
-          maxBounds={UP_BOUNDS}
+          maxBounds={PRAYAGRAJ_BOUNDS}
           maxBoundsViscosity={1.0}
-          minZoom={7}
+          minZoom={11}
+          maxZoom={18}
           style={{ borderRadius: '0.75rem' }}
         >
           <TileLayer

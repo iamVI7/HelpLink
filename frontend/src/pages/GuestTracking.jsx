@@ -64,7 +64,7 @@ const PublicIdLookup = () => {
 
   return (
     <div
-      className="min-h-screen w-full flex flex-col items-center justify-center px-4 py-12"
+      className="min-h-screen w-full flex flex-col items-center justify-center px-4 py-8"
       style={{
         background: 'linear-gradient(145deg, #fff7f7 0%, #ffffff 40%, #f0fdf4 100%)',
         fontFamily: "'Outfit', 'Helvetica Neue', sans-serif",
@@ -78,10 +78,10 @@ const PublicIdLookup = () => {
         @keyframes spin { to{transform:rotate(360deg)} }
         .lookup-card { animation: gt_fadeUp 0.5s cubic-bezier(0.22,1,0.36,1) both; }
         .lookup-input {
-          width: 100%; padding: 0.75rem 1rem;
+          width: 100%; padding: 0.6rem 0.875rem;
           border: 1.5px solid rgba(0,0,0,0.1); border-radius: 0.625rem;
           background: #ffffff; color: #1a1714;
-          font-size: 0.9rem; font-family: monospace; letter-spacing: 0.08em;
+          font-size: 0.875rem; font-family: monospace; letter-spacing: 0.08em;
           outline: none; transition: border-color 0.15s, box-shadow 0.15s;
         }
         .lookup-input:focus {
@@ -90,7 +90,7 @@ const PublicIdLookup = () => {
         }
         .lookup-input::placeholder { color: #a8a29e; font-family: monospace; letter-spacing: 0.06em; }
         .lookup-btn {
-          width: 100%; padding: 0.75rem 1.5rem;
+          width: 100%; padding: 0.6rem 1.5rem;
           background: #dc2626; color: #fff; border: none; border-radius: 0.625rem;
           font-size: 0.72rem; font-weight: 800; text-transform: uppercase;
           letter-spacing: 0.14em; cursor: pointer;
@@ -105,7 +105,7 @@ const PublicIdLookup = () => {
       `}</style>
 
       {/* Brand strip */}
-      <div className="lookup-card flex justify-center mb-8">
+      <div className="lookup-card flex justify-center mb-5">
         <div style={{
           display: 'inline-flex', alignItems: 'center', gap: '0.6rem',
           padding: '6px 18px 6px 12px',
@@ -128,18 +128,18 @@ const PublicIdLookup = () => {
           background: 'rgba(255,255,255,0.9)',
           border: '1px solid rgba(255,255,255,0.9)',
           borderRadius: '1.5rem',
-          padding: '2rem 2rem 1.75rem',
+          padding: '1.5rem 1.75rem 1.25rem',
           backdropFilter: 'blur(20px)',
           boxShadow: '0 4px 6px rgba(0,0,0,0.03), 0 16px 48px rgba(0,0,0,0.07), 0 32px 80px rgba(220,38,38,0.04)',
         }}
       >
-        <div className="text-center mb-6">
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🔍</div>
+        <div className="text-center mb-4">
+          <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔍</div>
           <h1 style={{
             fontFamily: "'Playfair Display', Georgia, serif",
-            fontSize: 'clamp(1.4rem, 4vw, 1.7rem)',
+            fontSize: 'clamp(1.25rem, 4vw, 1.5rem)',
             color: '#111827', lineHeight: 1.2,
-            marginBottom: '0.5rem', letterSpacing: '-0.02em',
+            marginBottom: '0.4rem', letterSpacing: '-0.02em',
           }}>
             Track your <span style={{ color: '#dc2626', fontStyle: 'italic' }}>request.</span>
           </h1>
@@ -148,7 +148,7 @@ const PublicIdLookup = () => {
           </p>
         </div>
 
-        <form onSubmit={handleLookup} style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+        <form onSubmit={handleLookup} style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
           <div>
             <label style={{
               display: 'block', fontSize: '0.6rem', fontWeight: 700,
@@ -205,7 +205,7 @@ const PublicIdLookup = () => {
         </form>
 
         <p style={{
-          textAlign: 'center', marginTop: '1.25rem',
+          textAlign: 'center', marginTop: '0.875rem',
           fontSize: '0.65rem', color: '#9ca3af', lineHeight: 1.5,
         }}>
           Your ID looks like <span style={{ fontFamily: 'monospace', color: '#57534e' }}>HL-REQ-000001</span>
@@ -213,7 +213,7 @@ const PublicIdLookup = () => {
         </p>
       </div>
 
-      <p style={{ marginTop: '1.5rem', fontSize: '0.62rem', color: '#d1d5db', textAlign: 'center' }}>
+      <p style={{ marginTop: '1rem', fontSize: '0.62rem', color: '#d1d5db', textAlign: 'center' }}>
         Life-threatening?{' '}
         <strong style={{ color: '#dc2626' }}>Call 112 immediately.</strong>
       </p>
@@ -432,29 +432,17 @@ const GuestTracking = () => {
 
       <div className="relative z-10 w-full max-w-sm sm:max-w-md">
 
-        {/* Brand strip */}
-        <div className="gt-card flex justify-center mb-6 sm:mb-7">
-          <div style={{
-            display:'inline-flex',alignItems:'center',gap:'0.6rem',padding:'6px 18px 6px 12px',
-            background:'rgba(220,38,38,0.07)',border:'1px solid rgba(220,38,38,0.18)',borderRadius:'999px',
-            animation:'gt_borderGlow 2.5s ease-in-out infinite',backdropFilter:'blur(6px)',
-          }}>
-            <div style={{ width:7,height:7,borderRadius:'50%',background:'#ef4444',animation:'gt_pulse 1.3s ease-in-out infinite',flexShrink:0,boxShadow:'0 0 6px rgba(239,68,68,0.5)' }} />
-            <span style={{ fontSize:'0.58rem',fontWeight:800,textTransform:'uppercase',letterSpacing:'0.2em',color:'#dc2626' }}>
-              HelpLink · SOS Active
-            </span>
-          </div>
-        </div>
+        {/* ── REMOVED: "HelpLink · SOS Active" brand strip above the card ── */}
 
         {/* Main card */}
         <div className="gt-card-1 gt-card-shadow rounded-3xl overflow-hidden"
           style={{ background:'rgba(255,255,255,0.85)',border:'1px solid rgba(255,255,255,0.9)',backdropFilter:'blur(20px)' }}>
 
-          <div className="px-6 sm:px-9 pt-8 sm:pt-10 pb-6 sm:pb-8">
+          <div className="px-5 sm:px-7 pt-6 sm:pt-8 pb-4 sm:pb-6">
 
             {/* Status icon */}
-            <div className="flex justify-center mb-8 sm:mb-9">
-              <div className="gt-icon-float relative" style={{ width:100,height:100 }}>
+            <div className="flex justify-center mb-5 sm:mb-6">
+              <div className="gt-icon-float relative" style={{ width:80,height:80 }}>
                 {isSearching && (<><div className="gt-ripple"/><div className="gt-ripple gt-ripple-2"/><div className="gt-ripple gt-ripple-3"/></>)}
                 {isSearching && (
                   <div style={{ position:'absolute',inset:0,borderRadius:'50%',overflow:'hidden',zIndex:1 }}>
@@ -462,17 +450,17 @@ const GuestTracking = () => {
                   </div>
                 )}
                 <div style={{
-                  position:'relative',zIndex:2,width:100,height:100,borderRadius:'50%',
+                  position:'relative',zIndex:2,width:80,height:80,borderRadius:'50%',
                   background: isCompleted
                     ? 'radial-gradient(circle at 35% 35%, rgba(74,222,128,0.25), rgba(240,253,244,0.9))'
                     : isAccepted
                     ?'radial-gradient(circle at 35% 35%, rgba(74,222,128,0.25), rgba(240,253,244,0.9))'
                     :'radial-gradient(circle at 35% 35%, rgba(254,202,202,0.6), rgba(255,247,247,0.9))',
                   border:`1.5px solid ${isAccepted||isCompleted?'rgba(74,222,128,0.45)':'rgba(220,38,38,0.25)'}`,
-                  display:'flex',alignItems:'center',justifyContent:'center',fontSize:38,transition:'all 0.6s ease',
+                  display:'flex',alignItems:'center',justifyContent:'center',fontSize:30,transition:'all 0.6s ease',
                   boxShadow: isAccepted||isCompleted
-                    ?'0 0 0 12px rgba(21,128,61,0.06), 0 8px 32px rgba(21,128,61,0.18)'
-                    :'0 0 0 12px rgba(220,38,68,0.04), 0 8px 32px rgba(220,38,38,0.12)',
+                    ?'0 0 0 10px rgba(21,128,61,0.06), 0 6px 24px rgba(21,128,61,0.18)'
+                    :'0 0 0 10px rgba(220,38,68,0.04), 0 6px 24px rgba(220,38,38,0.12)',
                 }}>
                   <span style={{ animation:isAccepted||isCompleted?'gt_checkPop 0.45s ease both':'none' }}>
                     {isCompleted ? '✅' : isAccepted ? '✅' : '🔍'}
@@ -482,8 +470,8 @@ const GuestTracking = () => {
             </div>
 
             {/* Heading */}
-            <div className="text-center mb-6 sm:mb-7">
-              <h1 style={{ fontFamily:"'Playfair Display',Georgia,serif",fontSize:'clamp(1.6rem,5vw,2rem)',lineHeight:1.15,letterSpacing:'-0.025em',color:'#111827',marginBottom:'0.75rem' }}>
+            <div className="text-center mb-4 sm:mb-5">
+              <h1 style={{ fontFamily:"'Playfair Display',Georgia,serif",fontSize:'clamp(1.4rem,5vw,1.75rem)',lineHeight:1.15,letterSpacing:'-0.025em',color:'#111827',marginBottom:'0.5rem' }}>
                 {isCompleted ? (
                   <span style={{ color:'#15803d' }}>Help has arrived.</span>
                 ) : isAccepted ? (
@@ -501,28 +489,12 @@ const GuestTracking = () => {
               </p>
             </div>
 
-            {/* Status pill */}
-            <div className="flex justify-center mb-5">
-              <div style={{
-                display:'inline-flex',alignItems:'center',gap:8,padding:'8px 20px',borderRadius:999,
-                background:isAccepted||isCompleted?'rgba(21,128,61,0.08)':'rgba(220,38,38,0.07)',
-                border:`1px solid ${isAccepted||isCompleted?'rgba(74,222,128,0.35)':'rgba(220,38,38,0.2)'}`,
-                fontSize:'0.6rem',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.18em',
-                color:isAccepted||isCompleted?'#15803d':'#dc2626',
-              }}>
-                <span style={{
-                  width:6,height:6,borderRadius:'50%',background:isAccepted||isCompleted?'#22c55e':'#ef4444',flexShrink:0,
-                  boxShadow:isAccepted||isCompleted?'0 0 5px rgba(34,197,94,0.6)':'0 0 5px rgba(239,68,68,0.6)',
-                  animation:isAccepted||isCompleted?'none':'gt_pulse 1.2s ease-in-out infinite',
-                }} />
-                {isCompleted ? 'Completed' : isAccepted ? 'Helper Confirmed' : 'Scanning area…'}
-              </div>
-            </div>
+            {/* ── REMOVED: "Scanning area…" / "Helper Confirmed" status pill ── */}
 
             {/* ✅ NEW — Public ID badge so guests can note down their request ID */}
             {publicId && (
               <div
-                className="flex justify-center mb-4"
+                className="flex justify-center mb-3"
                 style={{ animation: 'gt_fadeUp 0.4s 0.1s ease both' }}
               >
                 <div style={{
@@ -548,7 +520,7 @@ const GuestTracking = () => {
             {/* ✅ NEW — Aftercare button: shown when SOS is completed (guests CAN use aftercare) */}
             {isCompleted && (
               <div
-                className="flex justify-center mb-5"
+                className="flex justify-center mb-3"
                 style={{ animation: 'gt_fadeUp 0.4s 0.18s ease both' }}
               >
                 <AftercareButton requestId={requestId} />
@@ -557,7 +529,7 @@ const GuestTracking = () => {
 
             {/* ✅ Photo section — show image if already uploaded, else show upload button only when searching */}
             {!isAccepted && !isCompleted && (
-              <div className="flex justify-center mb-5" style={{ animation:'gt_fadeUp 0.4s 0.2s ease both' }}>
+              <div className="flex justify-center mb-3" style={{ animation:'gt_fadeUp 0.4s 0.2s ease both' }}>
                 {hasImage ? (
                   // Image was sent with SOS or uploaded after — show it
                   <div className="flex flex-col items-center gap-2">
@@ -565,7 +537,7 @@ const GuestTracking = () => {
                       <img
                         src={images[0].url}
                         alt="SOS photo"
-                        style={{ width: 140, height: 100, objectFit: 'cover', display: 'block' }}
+                        style={{ width: 120, height: 84, objectFit: 'cover', display: 'block' }}
                       />
                     </div>
                     <p style={{ fontSize:'0.62rem',color:'#22c55e',margin:0,fontWeight:600 }}>✓ Photo visible to responders</p>
@@ -622,15 +594,16 @@ const GuestTracking = () => {
             )}
 
             {/* Guidance — from navigation state (passed by LandingPage after SOS) */}
+            {/* ✅ CHANGED: slice to first 3 tips only */}
             {guidanceFromNav && guidanceFromNav.length > 0 && (
-              <div className="mt-4 px-5 py-4 rounded-2xl"
+              <div className="mt-3 px-4 py-3 rounded-2xl"
                 style={{
                   background:'rgba(255,255,255,0.75)',border:'1px solid rgba(220,38,38,0.12)',
                   backdropFilter:'blur(10px)',animation:'gt_fadeUp 0.4s ease',
                 }}>
-                <div className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-red-500 mb-3">🚨 Immediate Guidance</div>
-                <ul className="m-0 p-0 list-none text-[0.8rem] text-stone-600 space-y-2">
-                  {guidanceFromNav.map((tip, i) => (
+                <div className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-red-500 mb-2">🚨 Immediate Guidance</div>
+                <ul className="m-0 p-0 list-none text-[0.75rem] text-stone-600 space-y-1.5">
+                  {guidanceFromNav.slice(0, 3).map((tip, i) => (
                     <li key={i} className="flex items-start gap-2">
                       <span className="text-red-400 mt-[2px]">•</span>
                       <span>{tip}</span>
@@ -643,23 +616,23 @@ const GuestTracking = () => {
             {/* Helper card */}
             {isAccepted && helper && (
               <div style={{
-                padding:'1.25rem',background:'rgba(240,253,244,0.8)',border:'1px solid rgba(74,222,128,0.3)',
-                borderRadius:'1.25rem',animation:'gt_fadeUp 0.4s ease both',
-                boxShadow:'0 4px 16px rgba(21,128,61,0.08)',marginTop:'1rem',
+                padding:'1rem',background:'rgba(240,253,244,0.8)',border:'1px solid rgba(74,222,128,0.3)',
+                borderRadius:'1rem',animation:'gt_fadeUp 0.4s ease both',
+                boxShadow:'0 4px 16px rgba(21,128,61,0.08)',marginTop:'0.75rem',
               }}>
-                <p style={{ fontSize:'0.56rem',fontWeight:800,textTransform:'uppercase',letterSpacing:'0.2em',color:'#15803d',marginBottom:'0.875rem' }}>
+                <p style={{ fontSize:'0.56rem',fontWeight:800,textTransform:'uppercase',letterSpacing:'0.2em',color:'#15803d',marginBottom:'0.625rem' }}>
                   Assigned Helper
                 </p>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                   <div style={{
-                    width:46,height:46,borderRadius:'50%',background:'linear-gradient(135deg, #166534, #22c55e)',
+                    width:40,height:40,borderRadius:'50%',background:'linear-gradient(135deg, #166534, #22c55e)',
                     border:'1.5px solid rgba(74,222,128,0.4)',display:'flex',alignItems:'center',justifyContent:'center',
-                    color:'#fff',fontWeight:700,fontSize:'1.1rem',flexShrink:0,boxShadow:'0 4px 16px rgba(21,128,61,0.28)',
+                    color:'#fff',fontWeight:700,fontSize:'1rem',flexShrink:0,boxShadow:'0 4px 12px rgba(21,128,61,0.28)',
                   }}>
                     {helper.name?.charAt(0)?.toUpperCase() || '?'}
                   </div>
                   <div>
-                    <p style={{ fontWeight:600,color:'#111827',fontSize:'0.95rem',margin:0 }}>{helper.name}</p>
+                    <p style={{ fontWeight:600,color:'#111827',fontSize:'0.875rem',margin:0 }}>{helper.name}</p>
                     {helper.phone && <p style={{ fontSize:'0.77rem',color:'#6b7280',margin:'3px 0 0' }}>📞 {helper.phone}</p>}
                   </div>
                 </div>
@@ -681,7 +654,7 @@ const GuestTracking = () => {
 
           {/* Footer */}
           <div className="gt-divider-line" />
-          <div className="px-6 sm:px-9 py-4 flex items-center justify-center gap-2" style={{ background:'rgba(255,255,255,0.5)' }}>
+          <div className="px-5 sm:px-7 py-3 flex items-center justify-center gap-2" style={{ background:'rgba(255,255,255,0.5)' }}>
             <div style={{ width:5,height:5,borderRadius:'50%',background:'#ef4444',flexShrink:0,boxShadow:'0 0 5px rgba(239,68,68,0.5)',animation:'gt_pulse 1.5s ease-in-out infinite' }} />
             <p style={{ fontSize:'0.63rem',color:'#9ca3af',margin:0 }}>
               Life-threatening?{' '}<strong style={{ color:'#dc2626',fontWeight:700 }}>Call 112 immediately.</strong>
