@@ -418,14 +418,13 @@ const UserDashboard = () => {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div
-      className="min-h-screen"
-      style={{
-        fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif",
-        background: '#f7f5f2',
-        color: '#1c1917',
-        paddingTop: '80px',
-      }}
-    >
+  style={{
+    fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif",
+    background: '#f7f5f2',
+    color: '#1c1917',
+    paddingTop: '80px',
+  }}
+>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400;1,9..144,600&family=DM+Sans:wght@300;400;500;600&display=swap');
 
@@ -584,7 +583,7 @@ const UserDashboard = () => {
       />
 
       <div style={{ position: 'relative', zIndex: 1 }}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 pb-16">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 pb-6">
 
           {activityLoading ? (
             <DashboardSkeleton />

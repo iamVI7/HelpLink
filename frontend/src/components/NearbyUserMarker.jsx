@@ -149,7 +149,8 @@ const buildUserIcon = (initial, distanceLabel, isNearest, isActive, role, isVeri
 
 // ── Component ─────────────────────────────────────────────────────────────────
 const NearbyUserMarker = ({ user, currentLat, currentLng, isNearest }) => {
-  const [userLng, userLat] = user.location.coordinates; // MongoDB [lng, lat]
+  if (user.role === 'admin') return null;
+  const [userLng, userLat] = user.location.coordinates;
 
   const distanceMetres = haversineDistance(currentLat, currentLng, userLat, userLng);
   const distanceLabel  = formatDistance(distanceMetres);

@@ -262,12 +262,6 @@ const Register = () => {
         <div className="flex flex-1 items-center justify-center px-6 py-8 bg-white/90 overflow-y-auto">
           <div className="w-full max-w-sm">
 
-            {/* Mobile wordmark */}
-            <div className="lg:hidden mb-6 fade-up flex items-center gap-2">
-              <LiveDot />
-              <span className="text-xs font-bold uppercase tracking-widest text-red-600">HelpLink</span>
-            </div>
-
             {/* Progress bar */}
             <div className="fade-up mb-5">
               <div className="flex justify-between items-center mb-2">

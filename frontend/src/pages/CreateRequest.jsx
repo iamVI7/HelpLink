@@ -49,11 +49,11 @@ const CreateRequestSkeleton = () => (
             <div className="space-y-2"><SkeletonBlock className="h-2.5 w-36" /><SkeletonBlock className="h-9 w-full" style={{ borderRadius: '0.5rem' }} /></div>
             <div className="space-y-2">
               <SkeletonBlock className="h-2.5 w-16" />
-              <div className="flex gap-2 flex-wrap">{[64,76,56,88,52].map((w,i)=><SkeletonBlock key={i} className="h-8" style={{width:w,borderRadius:'2rem'}}/>)}</div>
+              <div className="flex gap-2 flex-wrap">{[64, 76, 56, 88, 52].map((w, i) => <SkeletonBlock key={i} className="h-8" style={{ width: w, borderRadius: '2rem' }} />)}</div>
             </div>
             <div className="space-y-2">
               <SkeletonBlock className="h-2.5 w-14" />
-              <div className="flex gap-2 flex-wrap">{[88,96,80].map((w,i)=><SkeletonBlock key={i} className="h-8" style={{width:w,borderRadius:'2rem'}}/>)}</div>
+              <div className="flex gap-2 flex-wrap">{[88, 96, 80].map((w, i) => <SkeletonBlock key={i} className="h-8" style={{ width: w, borderRadius: '2rem' }} />)}</div>
             </div>
           </div>
           <div className="flex-1 p-8 flex flex-col gap-5">
@@ -132,10 +132,10 @@ const ImageUpload = ({ images, onChange, onRemove }) => {
 // ── Category Pills ─────────────────────────────────────────────────────────────
 // ❌ REMOVED 'tools' from categories
 const categoryOptions = [
-  { value: 'blood',     emoji: '🩸', label: 'Blood' },
-  { value: 'medical',   emoji: '🏥', label: 'Medical' },
+  { value: 'blood', emoji: '🩸', label: 'Blood' },
+  { value: 'medical', emoji: '🏥', label: 'Medical' },
   { value: 'emergency', emoji: '🚨', label: 'Emergency' },
-  { value: 'other',     emoji: '💡', label: 'Other' },
+  { value: 'other', emoji: '💡', label: 'Other' },
 ];
 
 const CategoryPills = ({ value, onChange }) => (
@@ -161,9 +161,9 @@ const CategoryPills = ({ value, onChange }) => (
 
 // ── Urgency Pills ──────────────────────────────────────────────────────────────
 const urgencyOptions = [
-  { value: 'high',   emoji: '🔴', label: 'High',   sub: 'Immediate' },
+  { value: 'high', emoji: '🔴', label: 'High', sub: 'Immediate' },
   { value: 'medium', emoji: '🟡', label: 'Medium', sub: 'Within hours' },
-  { value: 'low',    emoji: '🟢', label: 'Low',    sub: 'Within day' },
+  { value: 'low', emoji: '🟢', label: 'Low', sub: 'Within day' },
 ];
 
 const UrgencyPills = ({ value, onChange }) => (
@@ -190,15 +190,15 @@ const UrgencyPills = ({ value, onChange }) => (
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 const CreateRequest = () => {
-  const [pageReady,      setPageReady]      = useState(false);
+  const [pageReady, setPageReady] = useState(false);
   // ✅ FIX 3 — separate loading state for prefill fetch
   const [prefillLoading, setPrefillLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: '', description: '', category: 'other', urgency: 'medium', address: '', location: null,
   });
-  const [images,        setImages]        = useState([]);
-  const [submitting,    setSubmitting]    = useState(false);
-  const [locating,      setLocating]      = useState(false);
+  const [images, setImages] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [locating, setLocating] = useState(false);
   const [detectedCoords, setDetectedCoords] = useState(null);
 
   // ✅ FIX 3 — detect enhance mode from URL param
@@ -227,12 +227,12 @@ const CreateRequest = () => {
         const r = res.data;
         setFormData({
           // ✅ FIX 11 — normalize all fields
-          title:       r.title       || '',
+          title: r.title || '',
           description: r.description || '',
-          category:    r.category    || 'other',
-          urgency:     r.urgency     || 'medium',
-          address:     '',
-          location:    r.location    || null,
+          category: r.category || 'other',
+          urgency: r.urgency || 'medium',
+          address: '',
+          location: r.location || null,
         });
         if (r.location?.coordinates) {
           setDetectedCoords({
@@ -272,7 +272,7 @@ const CreateRequest = () => {
           const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
           const data = await res.json();
           if (data.display_name) address = data.display_name;
-        } catch (_) {}
+        } catch (_) { }
         setFormData(prev => ({
           ...prev,
           location: { type: 'Point', coordinates: [lng, lat] },
@@ -299,10 +299,10 @@ const CreateRequest = () => {
 
     if (isEnhanceMode) {
       // FIX 7 — only send non-empty fields in enhance mode
-      if (formData.title.trim())       formPayload.append('title',       formData.title);
+      if (formData.title.trim()) formPayload.append('title', formData.title);
       if (formData.description.trim()) formPayload.append('description', formData.description);
       formPayload.append('category', formData.category);
-      formPayload.append('urgency',  formData.urgency);
+      formPayload.append('urgency', formData.urgency);
     } else {
       Object.keys(formData).forEach((key) => {
         if (key === 'location' && formData.location) {
@@ -373,34 +373,86 @@ const CreateRequest = () => {
         .action-btn-primary:hover:not(:disabled){background:#ef4444!important;box-shadow:0 4px 16px rgba(220,38,38,0.28)}
         .loc-btn{transition:background 0.15s,border-color 0.15s,box-shadow 0.15s}
         .loc-btn:hover:not(:disabled){background:#fff7f7!important;border-color:rgba(220,38,38,0.6)!important;box-shadow:0 2px 8px rgba(220,38,38,0.1)}
+
+        .back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #78716c;
+  transition: color 0.18s;
+}
+.back-btn:hover { color: #1a1714; }
+.back-btn:hover .back-circle {
+  background: #f5f5f4;
+  border-color: #d6d3d1;
+}
+.back-btn:active .back-circle {
+  background: #e7e5e4;
+  transform: scale(0.93);
+}
+.back-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid #e7e5e4;
+  background: #fafaf9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.18s, border-color 0.18s, transform 0.12s;
+}
+.back-label {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
       `}</style>
 
       <div style={{ position: 'relative', zIndex: 1 }}>
         {/* ── HERO HEADER ── */}
         <section className="border-b border-stone-100 relative overflow-hidden mb-10" style={{ background: 'rgba(255,255,255,0.88)' }}>
           <div className="absolute pointer-events-none"
-            style={{ top:-100,right:-100,width:400,height:400,background:'radial-gradient(circle, rgba(220,38,38,0.05) 0%, transparent 70%)' }} />
+            style={{ top: -100, right: -100, width: 400, height: 400, background: 'radial-gradient(circle, rgba(220,38,38,0.05) 0%, transparent 70%)' }} />
           <div className="relative max-w-5xl mx-auto px-6 md:px-12 py-12 md:py-14">
-            <div className="fade-up flex items-center gap-3 mb-6">
+            <div className="fade-up flex items-center gap-4 mb-6">
+              <button onClick={() => navigate(-1)} className="back-btn" aria-label="Go back">
+                <span className="back-circle">
+                  <svg width="14" height="14" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M15 19l-7-7 7-7" />
+                  </svg>
+                </span>
+                <span className="back-label">Back</span>
+              </button>
+
+              <span style={{ width: 1, height: 18, background: '#e7e5e4', display: 'inline-block', flexShrink: 0 }} aria-hidden="true" />
+
               <span className="uppercase text-[10px] font-bold tracking-[0.18em] px-3 py-1"
-                style={{ border:'1px solid rgba(220,38,38,0.4)', color:'#dc2626', animation:'borderPulse 2s ease-in-out infinite' }}>
+                style={{ border: '1px solid rgba(220,38,38,0.4)', color: '#dc2626', animation: 'borderPulse 2s ease-in-out infinite' }}>
                 HelpLink
               </span>
+
               {isEnhanceMode && (
                 <span className="uppercase text-[10px] font-bold tracking-[0.18em] px-3 py-1 rounded-full"
-                  style={{ background:'rgba(245,158,11,0.1)', border:'1px solid rgba(245,158,11,0.4)', color:'#b45309' }}>
+                  style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.4)', color: '#b45309' }}>
                   ✏️ Enhance Mode
                 </span>
               )}
             </div>
             <div className="fade-up-1">
               <h1 className="leading-none mb-3"
-                style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:'clamp(2rem,4vw,3rem)', color:'#1a1714', letterSpacing:'-0.01em' }}>
+                style={{ fontFamily: "'DM Serif Display',Georgia,serif", fontSize: 'clamp(2rem,4vw,3rem)', color: '#1a1714', letterSpacing: '-0.01em' }}>
                 {isEnhanceMode ? (
-                  <>Add More{' '}<span style={{ color:'#dc2626', fontStyle:'italic' }}>Details.</span>
-                  <span className="text-stone-400 text-base font-normal ml-2">(Optional)</span></>
+                  <>Add More{' '}<span style={{ color: '#dc2626', fontStyle: 'italic' }}>Details.</span>
+                    <span className="text-stone-400 text-base font-normal ml-2">(Optional)</span></>
                 ) : (
-                  <>Create a{' '}<span style={{ color:'#dc2626', fontStyle:'italic' }}>Help Request.</span></>
+                  <>Create a{' '}<span style={{ color: '#dc2626', fontStyle: 'italic' }}>Help Request.</span></>
                 )}
               </h1>
               <p className="text-sm text-stone-400 leading-relaxed max-w-sm">
@@ -465,7 +517,7 @@ const CreateRequest = () => {
 
                 {isEnhanceMode ? (
                   <div className="rounded-xl px-5 py-4 text-center"
-                    style={{ background:'rgba(245,158,11,0.05)', border:'1px dashed rgba(245,158,11,0.35)' }}>
+                    style={{ background: 'rgba(245,158,11,0.05)', border: '1px dashed rgba(245,158,11,0.35)' }}>
                     <p className="text-[0.72rem] text-amber-700 font-medium m-0">📍 Location cannot be changed after SOS is sent.</p>
                     <p className="text-[0.65rem] text-stone-400 m-0 mt-1">Your original location is preserved and visible to responders.</p>
                   </div>
@@ -476,13 +528,13 @@ const CreateRequest = () => {
                       className="loc-btn w-full mb-3 flex items-center justify-center gap-2 py-2.5 px-4 border border-stone-200 bg-white text-stone-700 text-xs font-bold uppercase tracking-widest rounded-lg disabled:opacity-50">
                       {locating ? (
                         <><svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                         </svg>Detecting location...</>
                       ) : (
                         <><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>Use My Current Location</>
                       )}
                     </button>
@@ -495,9 +547,9 @@ const CreateRequest = () => {
                     {formData.address && (
                       <p className="mt-3 text-xs text-green-600 flex items-start gap-1.5 font-medium">
                         <svg className="w-3.5 h-3.5 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/>
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
-                        <span>{formData.address.substring(0,100)}{formData.address.length>100?'...':''}</span>
+                        <span>{formData.address.substring(0, 100)}{formData.address.length > 100 ? '...' : ''}</span>
                       </p>
                     )}
                   </div>
@@ -514,8 +566,8 @@ const CreateRequest = () => {
                     {submitting ? (
                       <span className="flex items-center justify-center gap-2">
                         <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                         </svg>
                         {isEnhanceMode ? 'Updating...' : 'Creating...'}
                       </span>

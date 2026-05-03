@@ -118,15 +118,18 @@ const AdminMiniMap = () => {
   const { allRequests } = useRequests();
   const mapRef = useRef(null);
 
-  // 🔥 AUTO ZOOM — original logic preserved exactly
+  // 🔥 AUTO ZOOM — flies to the latest request whenever allRequests changes
   useEffect(() => {
     if (!mapRef.current || allRequests.length === 0) return;
 
     const latest = allRequests[0];
+    if (!latest?.location?.coordinates) return;
+
     const [lng, lat] = latest.location.coordinates;
 
+    const map = mapRef.current;
     setTimeout(() => {
-      mapRef.current.flyTo([lat, lng], 15, { duration: 1.2 });
+      map.flyTo([lat, lng], 15, { duration: 1.2 });
     }, 150);
   }, [allRequests]);
 
@@ -197,12 +200,11 @@ const AdminMiniMap = () => {
         style={{ height: 360 }}
       >
         <MapContainer
+          ref={mapRef}
           center={PRAYAGRAJ_CENTER}
           zoom={13}
           style={{ height: '100%', width: '100%', background: '#f5f0eb' }}
-          whenCreated={(map) => (mapRef.current = map)}
           zoomControl={true}
-          // ── Geofencing: tight Prayagraj box, matches MapView exactly ──
           maxBounds={PRAYAGRAJ_BOUNDS}
           maxBoundsViscosity={1.0}
           minZoom={11}

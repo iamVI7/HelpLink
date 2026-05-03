@@ -252,11 +252,6 @@ const Login = () => {
         <div className="flex flex-1 items-center justify-center px-6 py-14 bg-white/90">
           <div className="w-full max-w-sm">
 
-            <div className="lg:hidden mb-8 fade-up flex items-center gap-2">
-              <LiveDot />
-              <span className="text-xs font-bold uppercase tracking-widest text-red-600">HelpLink</span>
-            </div>
-
             <div className="fade-up mb-2">
               <span className="border-pulse inline-block text-xs font-bold uppercase tracking-widest text-red-600 border border-red-600/40 px-2.5 py-1">
                 Sign In

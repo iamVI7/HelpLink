@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useRequests } from '../context/RequestContext';
@@ -124,35 +125,62 @@ const SOSButton = ({ onTrigger, loading, disabled, cooldown, fetchingLocation })
     return () => el.removeEventListener('touchstart', handleTouchStart);
   }, [startHold]);
 
-  const radius        = 94;
+  // Ring geometry — slightly smaller, thinner stroke for a cleaner look
+  const size         = 200;
+  const cx           = size / 2;
+  const radius       = 88;
   const circumference = 2 * Math.PI * radius;
-  const strokeDash    = ((100 - progress) / 100) * circumference;
-  const cooldownPct   = cooldown > 0 ? (cooldown / 60) * 100 : 0;
-  const cooldownDash  = ((100 - cooldownPct) / 100) * circumference;
-  const holdSeconds   = Math.round((progress / 100) * holdDuration / 1000 * 10) / 10;
+  const strokeDash   = ((100 - progress) / 100) * circumference;
+  const cooldownPct  = cooldown > 0 ? (cooldown / 60) * 100 : 0;
+  const cooldownDash = ((100 - cooldownPct) / 100) * circumference;
+  const holdSeconds  = Math.round((progress / 100) * holdDuration / 1000 * 10) / 10;
+
+  // Derive button background per state
+  const btnBg = loading
+    ? '#c41e1e'
+    : cooldown > 0
+    ? '#9e9892'
+    : holding
+    ? '#b91c1c'
+    : '#dc2626';
 
   return (
-    <div className="flex flex-col items-center gap-3">
-      <div className="relative" style={{ width: 216, height: 216 }}>
+    <div className="flex flex-col items-center gap-4">
+      <div className="relative select-none" style={{ width: size, height: size }}>
+
+        {/* Idle pulse rings — subtle, only 2 */}
         {!holding && !loading && cooldown === 0 && (
           <>
             <div className="absolute inset-0 rounded-full pointer-events-none sos-pulse-ring-1" />
             <div className="absolute inset-0 rounded-full pointer-events-none sos-pulse-ring-2" />
-            <div className="absolute inset-0 rounded-full pointer-events-none sos-pulse-ring-3" />
           </>
         )}
-        <svg width="216" height="216" className="absolute inset-0 pointer-events-none" style={{ transform: 'rotate(-90deg)' }}>
-          <circle cx="108" cy="108" r={radius} fill="none" stroke="rgba(220,38,38,0.14)" strokeWidth="6" />
+
+        {/* Progress / cooldown ring */}
+        <svg
+          width={size} height={size}
+          className="absolute inset-0 pointer-events-none"
+          style={{ transform: 'rotate(-90deg)' }}
+        >
+          {/* Track */}
+          <circle cx={cx} cy={cx} r={radius} fill="none"
+            stroke={cooldown > 0 ? 'rgba(245,158,11,0.12)' : 'rgba(220,38,38,0.08)'}
+            strokeWidth="3" />
+          {/* Active arc */}
           {cooldown > 0 ? (
-            <circle cx="108" cy="108" r={radius} fill="none" stroke="#f59e0b" strokeWidth="6" strokeLinecap="round"
+            <circle cx={cx} cy={cx} r={radius} fill="none"
+              stroke="#f59e0b" strokeWidth="3" strokeLinecap="round"
               strokeDasharray={circumference} strokeDashoffset={cooldownDash}
               style={{ transition: 'stroke-dashoffset 1s linear' }} />
           ) : (
-            <circle cx="108" cy="108" r={radius} fill="none" stroke="#dc2626" strokeWidth="6" strokeLinecap="round"
+            <circle cx={cx} cy={cx} r={radius} fill="none"
+              stroke="#dc2626" strokeWidth="3" strokeLinecap="round"
               strokeDasharray={circumference} strokeDashoffset={strokeDash}
-              style={{ transition: holding ? 'none' : 'stroke-dashoffset 0.2s ease' }} />
+              style={{ transition: holding ? 'none' : 'stroke-dashoffset 0.15s ease' }} />
           )}
         </svg>
+
+        {/* Main button */}
         <button
           ref={buttonRef}
           onMouseDown={startHold}
@@ -166,62 +194,81 @@ const SOSButton = ({ onTrigger, loading, disabled, cooldown, fetchingLocation })
             : loading ? 'Sending SOS...'
             : 'Hold for 2 seconds to send SOS'
           }
-          className={[
-            'absolute rounded-full border-none flex flex-col items-center justify-center',
-            'select-none transition-all duration-150',
-            isDisabled ? 'cursor-not-allowed' : 'cursor-pointer',
-            holding ? 'scale-95' : 'scale-100',
-          ].join(' ')}
           style={{
-            inset: 20,
-            background: loading
-              ? 'rgba(185,28,28,0.92)'
-              : cooldown > 0 ? 'rgba(120,113,108,0.55)'
-              : holding ? '#b91c1c' : '#dc2626',
+            position: 'absolute',
+            inset: 14,
+            borderRadius: '50%',
+            border: 'none',
+            background: btnBg,
+            cursor: isDisabled ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 4,
+            transform: holding ? 'scale(0.94)' : 'scale(1)',
+            transition: 'transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease',
             boxShadow: holding
-              ? '0 0 0 12px rgba(220,38,38,0.15), 0 20px 60px rgba(220,38,38,0.55)'
-              : cooldown > 0 ? '0 0 0 4px rgba(120,113,108,0.1), 0 6px 24px rgba(0,0,0,0.12)'
-              : '0 0 0 6px rgba(220,38,38,0.1), 0 16px 50px rgba(220,38,38,0.45)',
+              ? '0 8px 32px rgba(220,38,38,0.4)'
+              : cooldown > 0
+              ? '0 4px 16px rgba(0,0,0,0.10)'
+              : '0 8px 28px rgba(220,38,38,0.32)',
           }}
         >
           {loading ? (
-            <div className="flex flex-col items-center gap-2">
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" className="sos-spin">
-                <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
-                <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
+            <>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+                stroke="rgba(255,255,255,0.9)" strokeWidth="2" strokeLinecap="round"
+                className="sos-spin">
+                <circle cx="12" cy="12" r="10" strokeOpacity="0.2" />
+                <path d="M12 2a10 10 0 0 1 10 10" />
               </svg>
-              <span className="text-white font-bold tracking-widest uppercase text-[0.62rem]">
-                {fetchingLocation ? 'Locating…' : 'Sending…'}
+              <span style={{
+                color: 'rgba(255,255,255,0.75)',
+                fontSize: '0.58rem',
+                fontWeight: 600,
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+                marginTop: 2,
+              }}>
+                {fetchingLocation ? 'Locating' : 'Sending'}
               </span>
-            </div>
+            </>
           ) : cooldown > 0 ? (
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-white font-black leading-none text-[2.4rem]">{cooldown}s</span>
-              <span className="text-white/80 font-semibold tracking-widest uppercase text-[0.52rem]">cooldown</span>
-            </div>
+            <>
+              <span style={{ color: '#fff', fontSize: '2rem', fontWeight: 800, lineHeight: 1 }}>{cooldown}</span>
+              <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.52rem', fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase' }}>wait</span>
+            </>
           ) : holding ? (
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-white font-black leading-none text-[2.4rem]">{holdSeconds}s</span>
-              <span className="text-white/80 font-semibold tracking-widest uppercase text-[0.52rem]">hold…</span>
-            </div>
+            <>
+              <span style={{ color: '#fff', fontSize: '2rem', fontWeight: 800, lineHeight: 1 }}>{holdSeconds}</span>
+              <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.52rem', fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase' }}>hold</span>
+            </>
           ) : (
-            <div className="flex flex-col items-center gap-1.5">
-              <span className="text-white font-black tracking-[0.14em] uppercase leading-none" style={{ fontSize: '2.4rem' }}>SOS</span>
-            </div>
+            <span style={{
+              color: '#fff',
+              fontSize: '2.5rem',
+              fontWeight: 900,
+              letterSpacing: '0.04em',
+              lineHeight: 1,
+              display: 'inline-block',
+            }}>SOS</span>
           )}
         </button>
       </div>
-      <div className="text-center h-6">
+
+      {/* Hint text */}
+      <div style={{ height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {cooldown > 0 ? (
-          <span className="text-[0.78rem] text-amber-700 font-semibold">Next SOS in {cooldown}s</span>
+          <span style={{ fontSize: '0.75rem', color: '#b45309', fontWeight: 600 }}>Wait {cooldown}s</span>
         ) : holding ? (
-          <span className="text-[0.78rem] text-red-600 font-bold sos-pulse-text">Keep holding…</span>
+          <span style={{ fontSize: '0.75rem', color: '#dc2626', fontWeight: 600 }} className="sos-pulse-text">Keep holding…</span>
         ) : loading ? (
-          <span className="text-[0.78rem] text-red-500 font-semibold">
+          <span style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: 500 }}>
             {fetchingLocation ? 'Getting your location…' : 'Dispatching responders…'}
           </span>
         ) : (
-          <span className="text-[0.78rem] text-stone-400 tracking-wide">Hold for 2 seconds to send SOS</span>
+          <span style={{ fontSize: '0.75rem', color: '#c4bdb6', letterSpacing: '0.02em' }}>Hold 2 seconds to send</span>
         )}
       </div>
     </div>
@@ -313,13 +360,56 @@ const ImageAttach = ({ sosImage, setSosImage }) => {
 
 // ── Stats Pill ────────────────────────────────────────────────────────────────
 const StatsPill = ({ stats }) => {
-  if (!stats) return null;
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (!stats) return;
+    const raf = requestAnimationFrame(() => {
+      setTimeout(() => setVisible(true), 30);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [stats]);
+
+  // ── Loading skeleton — always render a pill shell with a spinner ──
+  if (!stats) {
+    return (
+      <div
+        className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 stats-pill-loading"
+        style={{
+          border: '1.5px solid rgba(214,211,209,0.55)',
+          background: 'rgba(255,255,255,0.80)',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.04)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+        }}
+      >
+        <svg
+          width="13" height="13" viewBox="0 0 24 24" fill="none"
+          stroke="#a8a29e" strokeWidth="2.5" strokeLinecap="round"
+          className="stats-pill-spin"
+          style={{ flexShrink: 0 }}
+        >
+          <circle cx="12" cy="12" r="10" strokeOpacity="0.2" />
+          <path d="M12 2a10 10 0 0 1 10 10" />
+        </svg>
+        <span className="text-[0.74rem] font-medium stats-pill-text-pulse whitespace-nowrap">
+          Checking nearby responders…
+        </span>
+      </div>
+    );
+  }
 
   const hasResponders = stats.totalActive > 0;
 
   const nearbyLabel = stats.isLocationScoped
     ? 'responders active nearby'
     : 'responders active';
+
+  // Minimal fade — just opacity, no transforms or stagger
+  const fadeIn = {
+    opacity:    visible ? 1 : 0,
+    transition: 'opacity 0.35s ease',
+  };
 
   if (hasResponders) {
     return (
@@ -331,6 +421,7 @@ const StatsPill = ({ stats }) => {
           boxShadow: '0 2px 12px rgba(34,197,94,0.10)',
           backdropFilter: 'blur(8px)',
           WebkitBackdropFilter: 'blur(8px)',
+          ...fadeIn,
         }}
       >
         <div className="flex items-center flex-shrink-0">
@@ -397,6 +488,7 @@ const StatsPill = ({ stats }) => {
         boxShadow: '0 2px 10px rgba(0,0,0,0.04)',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
+        ...fadeIn,
       }}
     >
       <span
@@ -437,9 +529,9 @@ const FAQ_ITEMS = [
 ];
 
 const FAQ = () => {
-  const [open, setOpen] = useState(null);
+  const [open, setOpen] = useState(0);
   return (
-    <section className="max-w-xl mx-auto px-6 py-16 text-center">
+    <section className="max-w-xl mx-auto px-6 pt-16 pb-6 text-center">
       <div className="flex items-center gap-4 mb-10">
         <span className="uppercase text-[0.65rem] tracking-[0.2em] font-bold text-stone-400 flex-shrink-0">FAQ</span>
         <div className="flex-1 h-px bg-black/[0.09]" />
@@ -483,24 +575,186 @@ const FAQ = () => {
   );
 };
 
+// ── Location Modal — defined OUTSIDE LandingPage to avoid re-creation on every render ──
+const LocationModal = ({ onClose }) => {
+  const handleEnableClick = () => {
+    if (!navigator.permissions) {
+      navigator.geolocation.getCurrentPosition(
+        () => onClose(),
+        () => window.location.reload(),
+        { timeout: 8000 }
+      );
+      return;
+    }
+
+    navigator.permissions.query({ name: 'geolocation' }).then((result) => {
+      if (result.state === 'granted') {
+        onClose();
+      } else {
+        navigator.geolocation.getCurrentPosition(
+          () => onClose(),
+          () => window.location.reload(),
+          { timeout: 8000 }
+        );
+      }
+    }).catch(() => {
+      navigator.geolocation.getCurrentPosition(
+        () => onClose(),
+        () => window.location.reload(),
+        { timeout: 8000 }
+      );
+    });
+  };
+
+  return createPortal(
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 99998,
+          background: 'rgba(0,0,0,0.45)',
+          backdropFilter: 'blur(6px)',
+          WebkitBackdropFilter: 'blur(6px)',
+        }}
+      />
+
+      {/* Modal — perfectly centered with fixed positioning */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="location-modal-title"
+        style={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          zIndex: 99999,
+          width: 'min(calc(100vw - 2rem), 360px)',
+          maxHeight: 'calc(100vh - 2rem)',
+          overflowY: 'auto',
+          background: '#fff',
+          borderRadius: 24,
+          border: '1px solid rgba(28,25,23,0.08)',
+          boxShadow: '0 24px 60px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.1)',
+          fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif",
+          animation: 'locationModalIn 0.3s cubic-bezier(0.22,1,0.36,1) both',
+        }}
+      >
+        {/* Icon + heading */}
+        <div style={{ padding: '28px 28px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: '50%',
+            background: 'rgba(220,38,38,0.07)',
+            border: '1.5px solid rgba(220,38,38,0.15)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <p id="location-modal-title" style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#1c1917', lineHeight: 1.3 }}>
+              Enable Location
+            </p>
+            <p style={{ margin: '6px 0 0', fontSize: 13, color: '#78716c', lineHeight: 1.6 }}>
+              HelpLink needs your location to connect you with the nearest responders in an emergency.
+            </p>
+          </div>
+        </div>
+
+        {/* Steps */}
+        <div style={{ margin: '20px 28px 0', padding: '14px 16px', borderRadius: 14, background: '#fafaf9', border: '1px solid rgba(28,25,23,0.06)' }}>
+          {[
+            { step: '1', text: 'Open your browser or device Settings' },
+            { step: '2', text: 'Find Site / App permissions' },
+            { step: '3', text: 'Enable Location for this page' },
+          ].map(({ step, text }) => (
+            <div key={step} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: step === '3' ? 0 : 10 }}>
+              <div style={{
+                width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                background: '#dc2626', color: '#fff',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 11, fontWeight: 700,
+              }}>{step}</div>
+              <span style={{ fontSize: 12, color: '#57534e', fontWeight: 500 }}>{text}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Buttons */}
+        <div style={{ padding: '16px 28px 24px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <button
+            onClick={handleEnableClick}
+            style={{
+              width: '100%', padding: '12px', borderRadius: 999, border: 'none',
+              background: '#dc2626', color: '#fff',
+              fontSize: 13, fontWeight: 700, letterSpacing: '0.02em',
+              cursor: 'pointer',
+              boxShadow: '0 4px 14px rgba(220,38,38,0.3)',
+            }}
+          >
+            I've enabled it — Reload
+          </button>
+          <button
+            onClick={onClose}
+            style={{
+              width: '100%', padding: '11px', borderRadius: 999,
+              border: '1px solid rgba(28,25,23,0.1)',
+              background: 'transparent', color: '#78716c',
+              fontSize: 13, fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Continue without location
+          </button>
+        </div>
+      </div>
+    </>,
+    document.body
+  );
+};
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 const LandingPage = () => {
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const { createRequest } = useRequests();
 
-  const [sosLoading,       setSosLoading]       = useState(false);
-  const [sosSuccess,       setSosSuccess]       = useState(false);
-  const [sosError,         setSosError]         = useState(null);
-  const [sosCategory,      setSosCategory]      = useState('critical');
-  const [sosImage,         setSosImage]         = useState(null);
-  const [cooldown,         setCooldown]         = useState(0);
-  const [stats,            setStats]            = useState(null);
-  const [fetchingLocation, setFetchingLocation] = useState(false);
+  const [sosLoading,        setSosLoading]        = useState(false);
+  const [sosSuccess,        setSosSuccess]        = useState(false);
+  const [sosError,          setSosError]          = useState(null);
+  const [sosCategory,       setSosCategory]       = useState('critical');
+  const [sosImage,          setSosImage]          = useState(null);
+  const [cooldown,          setCooldown]          = useState(0);
+  const [stats,             setStats]             = useState(null);
+  const [fetchingLocation,  setFetchingLocation]  = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
 
   const cooldownTimerRef = useRef(null);
 
   useEffect(() => () => clearInterval(cooldownTimerRef.current), []);
+
+  // ── Check if location is off on mount ──
+  useEffect(() => {
+    if (!navigator.geolocation) { setShowLocationModal(true); return; }
+    if (!navigator.permissions) { setShowLocationModal(true); return; }
+
+    navigator.permissions.query({ name: 'geolocation' }).then((result) => {
+      if (result.state === 'denied' || result.state === 'prompt') {
+        setShowLocationModal(true);
+      }
+      result.onchange = () => {
+        if (result.state === 'granted') setShowLocationModal(false);
+      };
+    }).catch(() => {
+      setShowLocationModal(true);
+    });
+  }, []);
 
   useEffect(() => {
     localStorage.removeItem('activeRequestId');
@@ -676,11 +930,24 @@ const LandingPage = () => {
   return (
     <div className="min-h-screen relative bg-white text-[#1a1714]"
       style={{ fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif" }}>
+
+      {/* Location modal — rendered outside the page tree via portal */}
+      {showLocationModal && (
+        <LocationModal onClose={() => setShowLocationModal(false)} />
+      )}
+
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700&display=swap');
         @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes locationModalIn { from{opacity:0;transform:translate(-50%,-48%) scale(0.97)} to{opacity:1;transform:translate(-50%,-50%) scale(1)} }
         @keyframes sosPulseRing { 0%{transform:scale(1);opacity:0.5} 70%{transform:scale(1.45);opacity:0} 100%{transform:scale(1.45);opacity:0} }
         @keyframes sosSpin { to{transform:rotate(360deg)} }
+        @keyframes statsPillSpin { to{transform:rotate(360deg)} }
+        .stats-pill-spin { animation: statsPillSpin 0.9s linear infinite; }
+        @keyframes statsPillGlow { 0%,100%{box-shadow:0 2px 10px rgba(0,0,0,0.04)} 50%{box-shadow:0 2px 14px rgba(0,0,0,0.07), 0 0 0 3px rgba(214,211,209,0.25)} }
+        @keyframes statsPillTextFade { 0%,100%{opacity:0.45} 50%{opacity:0.75} }
+        .stats-pill-loading { animation: statsPillGlow 2s ease-in-out infinite; }
+        .stats-pill-text-pulse { color:#a8a29e; animation: statsPillTextFade 2s ease-in-out infinite; }
         @keyframes sosPulseText { 0%,100%{opacity:1} 50%{opacity:0.5} }
         @keyframes attachFadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
         @keyframes panelIn { from{opacity:0;transform:translateY(20px) scale(0.98)} to{opacity:1;transform:translateY(0) scale(1)} }
@@ -690,9 +957,8 @@ const LandingPage = () => {
         .fade-up-2  { animation: fadeUp 0.4s 0.16s ease both; }
         .panel-in   { animation: panelIn 0.5s 0.05s cubic-bezier(0.22,1,0.36,1) both; }
         .eyebrow-in { animation: eyebrowIn 0.4s ease both; }
-        .sos-pulse-ring-1 { background:rgba(220,38,38,0.22); animation:sosPulseRing 2.2s ease-out infinite; }
-        .sos-pulse-ring-2 { background:rgba(220,38,38,0.12); animation:sosPulseRing 2.2s ease-out 0.75s infinite; }
-        .sos-pulse-ring-3 { background:rgba(220,38,38,0.06); animation:sosPulseRing 2.2s ease-out 1.4s infinite; }
+        .sos-pulse-ring-1 { background:rgba(220,38,38,0.14); animation:sosPulseRing 2.4s ease-out infinite; }
+        .sos-pulse-ring-2 { background:rgba(220,38,38,0.07); animation:sosPulseRing 2.4s ease-out 0.9s infinite; }
         .sos-spin       { animation:sosSpin 0.85s linear infinite; }
         .sos-pulse-text { animation:sosPulseText 0.6s ease infinite; }
         .sos-attach-up  { animation:attachFadeUp 0.25s ease both; }
@@ -734,7 +1000,7 @@ const LandingPage = () => {
         }
       `}</style>
 
-      <section className="relative flex flex-col items-center justify-center min-h-screen pt-16 pb-10">
+      <section className="relative flex flex-col items-center justify-center pt-10 pb-6" style={{ minHeight: 'min(100svh, 780px)' }}>
         <div className="panel-in relative w-full flex flex-col items-center z-10 max-w-lg px-4">
 
           {/* Eyebrow */}
@@ -746,7 +1012,7 @@ const LandingPage = () => {
           </div>
 
           {/* Category pills */}
-          <div className="flex flex-row flex-nowrap gap-2 justify-center mb-7">
+          <div className="flex flex-row flex-nowrap gap-2 justify-center mb-10">
             {CATEGORIES.map(({ key, label, emoji }) => {
               const active = sosCategory === key;
               return (
@@ -832,13 +1098,20 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* ── Info Ticker — replaces the old <hr> divider ── */}
+      {/* ── Info Ticker ── */}
       <InfoTicker />
 
       <FAQ />
 
-      <footer className="border-t border-black/[0.06] bg-white/90">
-        <div className="px-6 py-6 flex items-center justify-center">
+      <footer>
+        <div className="px-6 pt-8 pb-6 text-center">
+          <div
+            style={{
+              height: 1,
+              background: 'linear-gradient(to right, transparent, #e8e4df 30%, #e8e4df 70%, transparent)',
+              marginBottom: 20,
+            }}
+          />
           <span className="text-xs text-stone-400">© 2026 HelpLink</span>
         </div>
       </footer>

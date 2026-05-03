@@ -3,41 +3,52 @@ const Request = require('../models/Request');
 
 exports.getStatsOverview = async (req, res) => {
   try {
-    // Active users
-    const activeThreshold = new Date(Date.now() - 10 * 1000); // 10 sec window
+    const { lat, lng } = req.query;
+    const hasLocation = lat !== undefined && lng !== undefined
+      && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng));
 
-const activeUsers = await User.find({
-  lastSeen: { $gte: activeThreshold }
-})
-.select('name avatar')
-.limit(6);
+    const activeThreshold = new Date(Date.now() - 10 * 1000);
 
-const totalActive = await User.countDocuments({
-  lastSeen: { $gte: activeThreshold }
-});
+    // Base filter — always active within time window
+    const baseFilter = { lastSeen: { $gte: activeThreshold }, role: { $ne: 'admin' } };
 
-    // Today helps
+    // If lat/lng provided, add a 5km geo filter using the 2dsphere index
+    const locationFilter = hasLocation
+      ? {
+          location: {
+            $geoWithin: {
+              $centerSphere: [
+                [parseFloat(lng), parseFloat(lat)], // GeoJSON is [lng, lat]
+                5 / 6371,                            // 5km in radians
+              ],
+            },
+          },
+        }
+      : {};
+
+    const filter = { ...baseFilter, ...locationFilter };
+
+    const [activeUsers, totalActive] = await Promise.all([
+      User.find(filter).select('name avatar').limit(6),
+      User.countDocuments(filter),
+    ]);
+
+    // Stats (unaffected by location — these are global)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
-    const todayHelps = await Request.countDocuments({
-      status: 'completed',
-      updatedAt: { $gte: today }
-    });
-
-    // Week helps
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-    const weekHelps = await Request.countDocuments({
-      status: 'completed',
-      updatedAt: { $gte: weekAgo }
-    });
+    const [todayHelps, weekHelps] = await Promise.all([
+      Request.countDocuments({ status: 'completed', updatedAt: { $gte: today } }),
+      Request.countDocuments({ status: 'completed', updatedAt: { $gte: weekAgo } }),
+    ]);
 
     res.json({
       activeUsers,
       totalActive,
       todayHelps,
-      weekHelps
+      weekHelps,
+      isLocationScoped: hasLocation, // StatsPill already reads this
     });
 
   } catch (err) {

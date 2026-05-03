@@ -65,8 +65,7 @@ export const deleteRequestAdmin = (id) => api.patch(`/requests/admin/${id}/delet
 // ─────────────────────────────────────────────
 // NEARBY USERS / STATS
 // ─────────────────────────────────────────────
-export const getStatsOverview = () => api.get('/stats/overview');
-
+export const getStatsOverview = (params = {}) => api.get('/stats/overview', { params });
 export const getNearbyUsers = (lat, lng) =>
   api.get('/users/nearby', { params: { lat, lng } });
 

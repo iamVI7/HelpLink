@@ -330,11 +330,9 @@ const BackButton = ({ onClick }) => (
 // ── Bottom Action Bar ─────────────────────────────────────────────────────────
 const BottomActionBar = ({ onRequestHelp, onRefresh, refreshing }) => (
   <div
+    className="bottom-action-bar-wrap"
     style={{
-      position: 'absolute',
-      bottom: 32,
-      left: '50%',
-      transform: 'translateX(-50%)',
+      position: 'relative',
       zIndex: 1000,
       display: 'flex',
       alignItems: 'center',
@@ -436,7 +434,7 @@ const BottomActionBar = ({ onRequestHelp, onRefresh, refreshing }) => (
       </svg>
       Refresh
     </button>
-  </div>
+    </div>
 );
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -516,7 +514,7 @@ const MapView = () => {
   // ── Fly to user location once map AND location are both ready ───────────
   useEffect(() => {
     if (!map || !userLocation) return;
-    map.setView(userLocation, 13, { animate: false });
+    map.setView(userLocation, 15, { animate: true });
   }, [map, userLocation]);
 
   // ── Nearby users refresh (every 30 s) ───────────────────────────────────
@@ -537,7 +535,7 @@ const MapView = () => {
     if (latest?.location?.coordinates && latest._id !== latestSocketReqRef.current) {
       latestSocketReqRef.current = latest._id;
       const [lng, lat] = latest.location.coordinates;
-      map.flyTo([lat, lng], 15, { duration: 1.2 });
+      map.flyTo([lat, lng], 16, { duration: 1.5 });
     }
   }, [requests.length, map]);
 
@@ -765,7 +763,7 @@ const MapView = () => {
       <BackButton onClick={() => navigate(-1)} />
 
       {/* ── Top-right panel ── */}
-      <div className="absolute top-[72px] right-4 z-[1000] flex flex-col gap-2">
+      <div className="absolute top-[72px] right-4 z-[40] flex flex-col gap-2">
 
         {/* Requests card — pill */}
         <div
@@ -802,39 +800,117 @@ const MapView = () => {
 
         {/* Online Helpers card */}
         {nearbyUsers.length > 0 && (
-          <div
-            style={{
-              background: 'rgba(255,255,255,0.94)',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
-              border: '1px solid rgba(28,25,23,0.08)',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04)',
-              borderRadius: 20,
-              minWidth: 158,
-            }}
-          >
-            <div style={{ padding: '13px 16px 11px', textAlign: 'center' }}>
-              <div style={{ fontSize: 30, fontWeight: 900, color: '#15803d', lineHeight: 1, fontVariantNumeric: 'tabular-nums', marginBottom: 2 }}>
-                {nearbyUsers.length}
-              </div>
-              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#a8a29e' }}>
-                Online Helpers
-              </div>
+          <div style={{
+            background: 'rgba(255,255,255,0.94)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            border: '1px solid rgba(28,25,23,0.08)',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04)',
+            borderRadius: 999,
+            display: 'inline-flex',
+            alignItems: 'center',
+            padding: '8px 14px',
+            gap: 10,
+          }}>
+            {/* Avatars stack */}
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              {nearbyUsers.slice(0, 3).map((u, i) => (
+                <div key={u._id} style={{
+                  width: 26, height: 26, borderRadius: '50%',
+                  background: '#15803d',
+                  border: '2px solid #fff',
+                  marginLeft: i === 0 ? 0 : -8,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 10, fontWeight: 700, color: '#fff',
+                  fontFamily: "'DM Sans', sans-serif",
+                  zIndex: 3 - i,
+                  position: 'relative',
+                }}>
+                  {u.name?.[0]?.toUpperCase() ?? '?'}
+                </div>
+              ))}
             </div>
-            <div style={{ borderTop: '1px solid #f5f5f4', padding: '6px 14px', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ width: 6, height: 6, borderRadius: 999, background: '#22c55e', display: 'inline-block', flexShrink: 0 }} />
-              <span style={{ fontSize: 11, fontWeight: 600, color: '#15803d' }}>Within 2.4 km</span>
+            <span style={{ width: 1, height: 18, background: 'rgba(28,25,23,0.1)', flexShrink: 0 }} />
+            {/* Count + label */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <span style={{ fontSize: 12, fontWeight: 800, color: '#15803d', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+                {nearbyUsers.length} helper{nearbyUsers.length > 1 ? 's' : ''} nearby
+              </span>
+              <span style={{ fontSize: 9, fontWeight: 600, color: '#a8a29e', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                Within 5 km
+              </span>
             </div>
+            {/* Live dot */}
+            <span style={{ width: 6, height: 6, borderRadius: 999, background: '#22c55e', display: 'inline-block', flexShrink: 0 }} />
           </div>
         )}
       </div>
 
-      {/* ── Bottom Action Bar ── */}
-      <BottomActionBar
-        onRequestHelp={() => navigate('/')}
-        onRefresh={handleRefresh}
-        refreshing={refreshing}
-      />
+      {/* ── Bottom bar group ── */}
+      <div style={{
+        position: 'absolute',
+        bottom: 'max(32px, env(safe-area-inset-bottom, 32px))',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 1000,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+      }}>
+        <BottomActionBar
+          onRequestHelp={() => navigate('/')}
+          onRefresh={handleRefresh}
+          refreshing={refreshing}
+        />
+
+        {/* ── Locate Me pill ── */}
+        <button
+        onClick={() => {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const { latitude, longitude } = position.coords;
+              userLocationRef.current = [latitude, longitude];
+              setUserLocation([latitude, longitude]);
+              if (map) map.flyTo([latitude, longitude], 15, { duration: 1.2 });
+            },
+            (error) => {
+              console.error('Locate me error:', error);
+              if (map && userLocation) map.flyTo(userLocation, 15, { duration: 1.2 });
+            },
+            { timeout: 5000, maximumAge: 0 }
+          );
+        }}
+        aria-label="Locate me"
+        title="Centre map on your location"
+        style={{
+          width: 48,
+          height: 48,
+          borderRadius: 999,
+          border: '1px solid rgba(28,25,23,0.09)',
+          background: 'rgba(255,255,255,0.96)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+          color: '#1c1917',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)',
+          transition: 'background 0.15s, transform 0.1s',
+          flexShrink: 0,
+        }}
+        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,1)'; }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.96)'; }}
+        onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.92)'; }}
+        onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+          <circle cx="12" cy="12" r="8" strokeWidth="1.5" strokeDasharray="2 2"/>
+        </svg>
+      </button>
+      </div>
 
       {/* ── Global styles ── */}
       <style>{`
@@ -866,6 +942,9 @@ const MapView = () => {
           backdrop-filter: blur(6px) !important;
           border-radius: 8px !important;
           padding: 2px 6px !important;
+        }
+        @supports (padding-bottom: env(safe-area-inset-bottom)) {
+          .bottom-action-bar-wrap { padding-bottom: env(safe-area-inset-bottom); }
         }
       `}</style>
     </div>

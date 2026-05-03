@@ -1,10 +1,11 @@
 /**
- * ProfilePage.jsx  — REFACTORED + SKELETON LOADER
+ * ProfilePage.jsx — Layout Revision
  *
- * Changes from previous version:
- *   ✅ REMOVED: Plain spinner loading state
- *   ✅ ADDED:   Full ProfileSkeleton matching actual layout
- *   ✅ KEPT:    All existing logic — fetch, error, render — unchanged
+ * Layout change:
+ *   LEFT column  (1/3): ProfileStats → ActivitySummary stacked
+ *   RIGHT column (2/3): ProfileEmergencyCard — full height, no cramping
+ *
+ * ✅ All fetch logic / data flow unchanged
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -15,233 +16,128 @@ import ProfileStats         from '../components/profile/ProfileStats';
 import ProfileEmergencyCard from '../components/profile/ProfileEmergencyCard';
 import ActivitySummary      from '../components/profile/ActivitySummary';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ProfileSkeleton
-// Mirrors exact layout: Header → Stats + Emergency card → Activity summary
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Skeleton atom ─────────────────────────────────────────────────────────────
+const Sk = ({ w, h, r = 8, style = {} }) => (
+  <div className="sk-shimmer" style={{ width: w, height: h, borderRadius: r, flexShrink: 0, ...style }} />
+);
+
+// ── ProfileSkeleton ───────────────────────────────────────────────────────────
 const ProfileSkeleton = () => (
   <div
     className="min-h-screen pt-20"
-    style={{
-      fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif",
-      background: '#ffffff',
-      position: 'relative',
-    }}
+    style={{ fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif", background: '#f7f5f2' }}
   >
-    {/* Grid background */}
-    <div
-      aria-hidden="true"
-      style={{
-        position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
-        backgroundImage:
-          'linear-gradient(rgba(0,0,0,0.018) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.018) 1px, transparent 1px)',
-        backgroundSize: '48px 48px',
-      }}
-    />
-
     <style>{`
-      @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap');
-      @keyframes shimmer {
-        0%   { background-position: -600px 0; }
-        100% { background-position:  600px 0; }
-      }
-      @keyframes borderPulse {
-        0%, 100% { border-color: rgba(220,38,38,0.2); }
-        50%       { border-color: rgba(220,38,38,0.5); }
-      }
-      .skel {
-        background: linear-gradient(90deg, #f5f4f2 25%, #eceae7 50%, #f5f4f2 75%);
+      @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=DM+Sans:wght@300;400;500;600&display=swap');
+      @keyframes shimmer { 0% { background-position: -600px 0; } 100% { background-position: 600px 0; } }
+      .sk-shimmer {
+        background: linear-gradient(90deg, #e8e4de 25%, #f0ece6 50%, #e8e4de 75%);
         background-size: 600px 100%;
-        animation: shimmer 1.4s ease-in-out infinite;
-        border-radius: 6px;
+        animation: shimmer 1.6s ease-in-out infinite;
       }
-      .pulse-ring { animation: borderPulse 2s ease-in-out infinite; }
+      .hero-card {
+        background: #fff;
+        border-radius: 24px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 6px 24px rgba(0,0,0,0.05);
+        border: 1px solid rgba(0,0,0,0.05);
+      }
+      .content-card {
+        background: #fff;
+        border-radius: 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 4px 16px rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.05);
+        overflow: hidden;
+      }
     `}</style>
 
-    <div style={{ position: 'relative', zIndex: 1 }}>
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-10 pb-16">
+      <div className="mt-6 flex flex-col gap-6">
 
-      {/* ── ProfileHeader skeleton ── */}
-      <section
-        className="border-b border-stone-100 relative overflow-hidden"
-        style={{ background: 'rgba(255,255,255,0.88)' }}
-      >
-        <div
-          className="absolute pointer-events-none"
-          style={{
-            top: -80, right: -80, width: 320, height: 320,
-            background: 'radial-gradient(circle, rgba(220,38,38,0.04) 0%, transparent 70%)',
-          }}
-        />
-        <div className="relative max-w-5xl mx-auto px-6 md:px-12 py-12 md:py-14">
-          <div className="flex flex-col md:flex-row md:items-center gap-6 md:gap-10">
-
-            {/* Avatar */}
-            <div className="skel w-20 h-20 md:w-24 md:h-24 rounded-2xl shrink-0" />
-
-            {/* Info */}
-            <div className="flex-1 space-y-3">
-              <div className="flex items-center gap-3 flex-wrap">
-                <div className="skel h-8 w-44 rounded-lg" style={{ animationDelay: '60ms' }} />
-                <div className="skel h-5 w-12 rounded-full" style={{ animationDelay: '80ms' }} />
-                <div className="skel h-5 w-16 rounded-full" style={{ animationDelay: '100ms' }} />
+        {/* Header */}
+        <div className="hero-card" style={{ padding: '1.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <Sk w={72} h={72} r={16} />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <Sk w={160} h={26} r={6} />
+                <Sk w={44} h={20} r={8} />
               </div>
-              <div className="skel h-3.5 w-52 rounded" style={{ animationDelay: '80ms' }} />
-              <div className="skel h-3 w-32 rounded"   style={{ animationDelay: '100ms' }} />
-              <div className="skel h-2.5 w-40 rounded" style={{ animationDelay: '120ms' }} />
+              <Sk w={180} h={12} r={5} />
+              <Sk w={110} h={11} r={5} />
+              <Sk w={130} h={10} r={5} />
             </div>
-
           </div>
         </div>
-      </section>
 
-      {/* ── Stats + Emergency card skeleton ── */}
-      <section className="max-w-5xl mx-auto px-6 md:px-12 py-8">
-        <div className="md:grid md:grid-cols-3 md:gap-8">
+        {/* Stats + Activity | Emergency */}
+        <div className="md:grid md:grid-cols-3 md:gap-6">
 
-          {/* Stats column */}
-          <div className="md:col-span-1 mb-8 md:mb-0">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="skel h-2.5 w-10 rounded" />
-              <div className="flex-1 h-px bg-stone-100" />
+          {/* LEFT — Stats + Activity stacked */}
+          <div className="md:col-span-1 mb-6 md:mb-0 flex flex-col gap-6">
+            {/* Stats skeleton */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <Sk w={40} h={16} r={5} style={{ marginBottom: 2 }} />
+              {[null, null, null].map((_, i) => (
+                <div key={i} className="content-card" style={{ padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <Sk w={60} h={10} r={4} />
+                  <Sk w={44} h={24} r={6} />
+                </div>
+              ))}
             </div>
-            <div className="flex flex-col gap-3">
-
-              {/* Rating card */}
-              <div
-                className="px-5 py-4 rounded-xl"
-                style={{ background: 'rgba(255,255,255,0.9)', border: '1px solid rgba(0,0,0,0.08)' }}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="skel h-2.5 w-12 rounded" />
-                  <div className="skel h-4 w-4 rounded" />
-                </div>
-                <div className="skel h-7 w-10 rounded" style={{ animationDelay: '40ms' }} />
-                <div className="skel h-2.5 w-24 rounded mt-2" style={{ animationDelay: '60ms' }} />
-              </div>
-
-              {/* Helps given card */}
-              <div
-                className="flex items-center justify-between px-5 py-4 rounded-xl"
-                style={{ background: 'rgba(255,255,255,0.9)', border: '1px solid rgba(0,0,0,0.08)' }}
-              >
-                <div className="space-y-2">
-                  <div className="skel h-7 w-8 rounded"   style={{ animationDelay: '80ms' }} />
-                  <div className="skel h-2.5 w-20 rounded" style={{ animationDelay: '100ms' }} />
-                </div>
-                <div className="skel w-5 h-5 rounded" style={{ animationDelay: '80ms' }} />
-              </div>
-
-              {/* Availability card */}
-              <div
-                className="px-5 py-4 rounded-xl"
-                style={{ background: 'rgba(255,255,255,0.9)', border: '1px solid rgba(0,0,0,0.08)' }}
-              >
-                <div className="skel h-2.5 w-20 rounded mb-3" style={{ animationDelay: '100ms' }} />
-                <div className="flex items-center gap-2">
-                  <div className="skel w-2 h-2 rounded-full" />
-                  <div className="skel h-3 w-16 rounded" style={{ animationDelay: '120ms' }} />
+            {/* Activity skeleton */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <Sk w={55} h={16} r={5} style={{ marginBottom: 2 }} />
+              <Sk w="100%" h={42} r={999} />
+              <Sk w="100%" h={42} r={999} />
+              <div className="content-card" style={{ padding: '13px 18px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <Sk w={18} h={18} r={4} />
+                    <Sk w={100} h={10} r={4} />
+                  </div>
+                  <Sk w={12} h={12} r={3} />
                 </div>
               </div>
-
             </div>
           </div>
 
-          {/* Emergency card column */}
+          {/* RIGHT — Emergency full height */}
           <div className="md:col-span-2">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="skel h-2.5 w-32 rounded" />
-              <div className="flex-1 h-px bg-stone-100" />
-              <div className="skel h-5 w-14 rounded-full" />
-            </div>
-
-            <div
-              className="rounded-2xl overflow-hidden"
-              style={{ border: '1px solid rgba(0,0,0,0.08)' }}
-            >
-              {/* Blood group header */}
-              <div
-                className="px-6 py-5 flex items-center justify-between"
-                style={{ background: 'rgba(0,0,0,0.02)', borderBottom: '1px solid rgba(0,0,0,0.05)' }}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="skel w-12 h-12 rounded-xl" style={{ animationDelay: '60ms' }} />
-                  <div className="space-y-2">
-                    <div className="skel h-2.5 w-20 rounded" style={{ animationDelay: '80ms' }} />
-                    <div className="skel h-5 w-8 rounded"    style={{ animationDelay: '100ms' }} />
+            <Sk w={130} h={16} r={5} style={{ marginBottom: 14 }} />
+            <div className="content-card">
+              <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #f5f3f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+                  <Sk w={44} h={44} r={10} />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <Sk w={70} h={10} r={4} />
+                    <Sk w={32} h={20} r={5} />
                   </div>
                 </div>
-                <div className="skel h-8 w-14 rounded-full" style={{ animationDelay: '60ms' }} />
+                <Sk w={52} h={28} r={10} />
               </div>
-
-              {/* Medical rows */}
-              <div className="px-6 py-5 space-y-5">
-                {[0, 1, 2, 3].map((i) => (
-                  <div key={i}>
-                    <div
-                      className="skel h-2.5 w-28 rounded mb-2.5"
-                      style={{ animationDelay: `${i * 30}ms` }}
-                    />
-                    <div className="flex gap-2 flex-wrap">
-                      <div className="skel h-6 w-16 rounded-full" style={{ animationDelay: `${i * 30 + 20}ms` }} />
-                      <div className="skel h-6 w-20 rounded-full" style={{ animationDelay: `${i * 30 + 40}ms` }} />
-                      {i % 2 === 0 && (
-                        <div className="skel h-6 w-14 rounded-full" style={{ animationDelay: `${i * 30 + 60}ms` }} />
-                      )}
+              <div style={{ padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                    <Sk w={90} h={10} r={4} />
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <Sk w={56} h={22} r={8} />
+                      <Sk w={68} h={22} r={8} />
+                      {i % 2 === 0 && <Sk w={48} h={22} r={8} />}
                     </div>
-                    {i < 3 && <div className="h-px bg-stone-100 mt-5" />}
+                    {i < 4 && <div style={{ height: 1, background: '#f5f3f0', marginTop: 4 }} />}
                   </div>
                 ))}
               </div>
             </div>
           </div>
-
-        </div>
-      </section>
-
-      {/* ── Activity Summary skeleton ── */}
-      <section className="max-w-5xl mx-auto px-6 md:px-12 pb-16">
-
-        <div className="flex items-center gap-3 mb-4">
-          <div className="skel h-2.5 w-14 rounded" />
-          <div className="flex-1 h-px bg-stone-100" />
         </div>
 
-        {/* Two stat cards */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          {[
-            { color: 'rgba(220,38,38,0.04)',  border: 'rgba(220,38,38,0.12)',  delay: '0ms'  },
-            { color: 'rgba(22,163,74,0.04)',  border: 'rgba(22,163,74,0.12)', delay: '60ms' },
-          ].map((c, i) => (
-            <div
-              key={i}
-              className="rounded-2xl p-5 flex flex-col gap-3"
-              style={{ background: c.color, border: `1px solid ${c.border}` }}
-            >
-              <div className="skel w-6 h-6 rounded-lg"   style={{ animationDelay: c.delay }} />
-              <div className="skel h-9 w-10 rounded-lg"  style={{ animationDelay: c.delay }} />
-              <div className="skel h-2.5 w-24 rounded"   style={{ animationDelay: c.delay }} />
-            </div>
-          ))}
-        </div>
-
-        {/* CTA row */}
-        <div className="w-full flex items-center justify-between px-5 py-3.5 rounded-xl border border-stone-200 bg-white">
-          <div className="flex items-center gap-2.5">
-            <div className="skel w-5 h-5 rounded" />
-            <div className="skel h-3 w-32 rounded" style={{ animationDelay: '40ms' }} />
-          </div>
-          <div className="skel h-3 w-3 rounded" />
-        </div>
-
-      </section>
-
+      </div>
     </div>
   </div>
 );
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ProfilePage
-// ─────────────────────────────────────────────────────────────────────────────
+// ── ProfilePage ───────────────────────────────────────────────────────────────
 const ProfilePage = () => {
   const [profileData, setProfileData] = useState(null);
   const [loading,     setLoading]     = useState(true);
@@ -265,25 +161,26 @@ const ProfilePage = () => {
     }
   }, []);
 
-  useEffect(() => {
-    fetchProfile();
-  }, [fetchProfile]);
+  useEffect(() => { fetchProfile(); }, [fetchProfile]);
 
-  // ── Loading ────────────────────────────────────────────────────────────────
   if (loading) return <ProfileSkeleton />;
 
-  // ── Error ──────────────────────────────────────────────────────────────────
   if (error) {
     return (
       <div
         className="min-h-screen pt-20 flex items-center justify-center"
-        style={{ background: '#ffffff', fontFamily: "'DM Sans', sans-serif" }}
+        style={{ background: '#f7f5f2', fontFamily: "'DM Sans', sans-serif" }}
       >
-        <div className="text-center max-w-sm">
-          <p className="text-sm text-red-500 mb-4">{error}</p>
+        <div className="text-center max-w-xs">
+          <p style={{ fontSize: '0.8rem', color: '#dc2626', marginBottom: 16 }}>{error}</p>
           <button
             onClick={fetchProfile}
-            className="px-6 py-2 bg-stone-900 text-white text-xs font-bold uppercase tracking-widest rounded-full"
+            style={{
+              padding: '8px 24px', background: '#1c1917', color: '#fff',
+              fontSize: '0.6rem', fontWeight: 700,
+              textTransform: 'uppercase', letterSpacing: '0.14em',
+              borderRadius: 999, border: 'none', cursor: 'pointer',
+            }}
           >
             Retry
           </button>
@@ -294,62 +191,83 @@ const ProfilePage = () => {
 
   const { user, emergencyProfile, stats } = profileData;
 
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div
-      className="min-h-screen text-stone-900 pt-20"
+      className="min-h-screen pt-20"
       style={{
         fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif",
-        background: '#ffffff',
-        position: 'relative',
+        background: '#f7f5f2',
+        color: '#1c1917',
       }}
     >
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
-          backgroundImage:
-            'linear-gradient(rgba(0,0,0,0.018) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.018) 1px, transparent 1px)',
-          backgroundSize: '48px 48px',
-        }}
-      />
-
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap');
-        @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-        .fade-up   { animation: fadeUp 0.45s ease both; }
-        .fade-up-1 { animation: fadeUp 0.45s 0.08s ease both; }
-        .fade-up-2 { animation: fadeUp 0.45s 0.16s ease both; }
-        .fade-up-3 { animation: fadeUp 0.45s 0.24s ease both; }
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+        .hero-card {
+          background: #fff;
+          border-radius: 24px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 6px 24px rgba(0,0,0,0.05);
+          border: 1px solid rgba(0,0,0,0.05);
+        }
+        .content-card {
+          background: #fff;
+          border-radius: 20px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 4px 16px rgba(0,0,0,0.04);
+          border: 1px solid rgba(0,0,0,0.05);
+          overflow: hidden;
+        }
+        @keyframes shimmer { 0% { background-position: -600px 0; } 100% { background-position: 600px 0; } }
+        .sk-shimmer {
+          background: linear-gradient(90deg, #e8e4de 25%, #f0ece6 50%, #e8e4de 75%);
+          background-size: 600px 100%;
+          animation: shimmer 1.6s ease-in-out infinite;
+        }
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .page-enter { animation: fadeUp 0.35s ease both; }
       `}</style>
 
-      <div style={{ position: 'relative', zIndex: 1 }}>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-10 pb-4 page-enter">
 
-        <ProfileHeader user={user} />
+        {/* Header */}
+        <div className="mt-6 mb-6">
+          <ProfileHeader user={user} />
+        </div>
 
-        <section className="max-w-5xl mx-auto px-6 md:px-12 py-8">
-          <div className="md:grid md:grid-cols-3 md:gap-8">
-            <div className="md:col-span-1 mb-8 md:mb-0 fade-up-1">
-              <ProfileStats stats={stats} user={user} />
-            </div>
-            <div className="md:col-span-2 fade-up-2">
-              <ProfileEmergencyCard
-                emergencyProfile={emergencyProfile}
-                onUpdate={fetchProfile}
-              />
-            </div>
+        {/* Two-column layout */}
+        <div className="md:grid md:grid-cols-3 md:gap-6 mb-6">
+
+          {/* LEFT — Stats then Activity stacked */}
+          <div className="md:col-span-1 mb-6 md:mb-0 flex flex-col gap-6">
+            <ProfileStats stats={stats} user={user} />
+            <ActivitySummary />
           </div>
-        </section>
 
-        <section className="max-w-5xl mx-auto px-6 md:px-12 pb-16 fade-up-3">
-          <ActivitySummary />
-        </section>
-
-        <footer className="border-t border-stone-100" style={{ background: 'rgba(255,255,255,0.9)' }}>
-          <div className="max-w-5xl mx-auto px-6 md:px-12 py-6 text-center">
-            <span className="text-xs text-stone-400">© 2026 HelpLink</span>
+          {/* RIGHT — Emergency full height */}
+          <div className="md:col-span-2">
+            <ProfileEmergencyCard
+              emergencyProfile={emergencyProfile}
+              onUpdate={fetchProfile}
+            />
           </div>
-        </footer>
+
+        </div>
+
+        {/* Footer */}
+<div style={{ textAlign: 'center', paddingBottom: 16, marginTop: '3.5rem' }}>
+  <div
+    style={{
+      height: 1,
+      background: 'linear-gradient(to right, transparent, #ddd8d2 30%, #ddd8d2 70%, transparent)',
+      marginBottom: 20,
+    }}
+  />
+  <span style={{ fontSize: '0.7rem', color: '#c7c4bf', letterSpacing: '0.06em' }}>
+    © 2026 HelpLink
+  </span>
+</div>
 
       </div>
     </div>
