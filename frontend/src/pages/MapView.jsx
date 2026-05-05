@@ -355,13 +355,13 @@ const BottomActionBar = ({ onRequestHelp, onRefresh, refreshing }) => (
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: 8,
-        padding: '10px 22px',
+        gap: 6,
+        padding: '10px 16px',
         borderRadius: 999,
         border: 'none',
         background: '#dc2626',
         color: '#fff',
-        fontSize: 13,
+        fontSize: 12,
         fontWeight: 700,
         letterSpacing: '0.02em',
         cursor: 'pointer',
@@ -398,13 +398,13 @@ const BottomActionBar = ({ onRequestHelp, onRefresh, refreshing }) => (
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: 7,
-        padding: '10px 18px',
+        gap: 5,
+        padding: '10px 12px',
         borderRadius: 999,
         border: 'none',
         background: 'transparent',
         color: '#78716c',
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: 600,
         letterSpacing: '0.02em',
         cursor: refreshing ? 'default' : 'pointer',
@@ -849,13 +849,14 @@ const MapView = () => {
       {/* ── Bottom bar group ── */}
       <div style={{
         position: 'absolute',
-        bottom: 'max(32px, env(safe-area-inset-bottom, 32px))',
+        bottom: 'max(20px, env(safe-area-inset-bottom, 20px))',
         left: '50%',
         transform: 'translateX(-50%)',
         zIndex: 1000,
         display: 'flex',
         alignItems: 'center',
-        gap: 8,
+        gap: 6,
+        maxWidth: 'calc(100vw - 24px)',
       }}>
         <BottomActionBar
           onRequestHelp={() => navigate('/')}
@@ -883,9 +884,10 @@ const MapView = () => {
         aria-label="Locate me"
         title="Centre map on your location"
         style={{
-          width: 48,
-          height: 48,
+          width: 44,
+          height: 44,
           borderRadius: 999,
+          flexShrink: 0,
           border: '1px solid rgba(28,25,23,0.09)',
           background: 'rgba(255,255,255,0.96)',
           backdropFilter: 'blur(24px)',
@@ -922,6 +924,10 @@ const MapView = () => {
         @keyframes blink         { 0%,100%{opacity:1;}50%{opacity:0.3;} }
         @keyframes sosPulse      { 0%{box-shadow:0 0 0 0 rgba(220,38,38,0.5);}70%{box-shadow:0 0 0 10px rgba(220,38,38,0);}100%{box-shadow:0 0 0 0 rgba(220,38,38,0);} }
         @keyframes bannerPulse   { 0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(0.8);} }
+        @media (max-width: 380px) {
+          .bottom-action-bar-wrap { padding: 5px 6px !important; }
+          .bottom-action-bar-wrap button { padding: 8px 10px !important; font-size: 11px !important; }
+        }
 
         .leaflet-popup-content-wrapper {
           border-radius: 18px !important;

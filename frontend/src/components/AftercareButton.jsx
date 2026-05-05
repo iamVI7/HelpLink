@@ -13,7 +13,7 @@ import { sendToAftercare } from '../services/api';
 import AftercareConsentModal from './AftercareConsentModal';
 import { useAuth } from '../context/AuthContext';
 
-const UNICARE_BASE_URL = 'http://localhost:3000';
+const UNICARE_BASE_URL = import.meta.env.VITE_UNICARE_URL || 'http://localhost:3000';
 
 const AftercareButton = ({ requestId, isGuest = false, style = {} }) => {
   const { user } = useAuth();

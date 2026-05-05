@@ -26,11 +26,13 @@ const {
   createGuestSOS,
   updateRequest,
   addGuestImage,
-  // ✅ NEW — Aftercare Bridge
+  // ✅ Aftercare Bridge
   sendToAftercare,
   sendMedicalProfile,
-  // ✅ NEW — Public ID tracking
+  // ✅ Public ID tracking
   trackByPublicId,
+  // ✅ NEW — Cancel Request
+  cancelRequest,
 } = require('../controllers/requestController');
 
 const createRequestValidation = [
@@ -60,24 +62,20 @@ router.post('/sos', optionalAuth, attachEmergencyProfile, upload.array('images',
 // Guest image upload — no auth, validated by isGuest flag in controller
 router.put('/:id/guest-image', upload.single('images'), addGuestImage);
 
-// ✅ NEW — Track by public ID (e.g. HL-REQ-000123)
-// Registered BEFORE the protect wall and BEFORE the generic /:id handler
-// so it is matched first for publicId-style params.
-// optionalAuth is used so logged-in users get enhanced data (helper details)
-// while guests can still access it without a token.
+// ✅ Track by public ID (e.g. HL-REQ-000123)
 router.get('/track/:publicId', optionalAuth, trackByPublicId);
 
-// ✅ NEW — Aftercare: allow BOTH guests and logged-in users
-// optionalAuth populates req.user if a valid JWT is present, but does NOT
-// block the request if there is no token — guests can still call this endpoint.
-// IMPORTANT: registered BEFORE the protect wall below so guests are not blocked.
+// ✅ Aftercare: allow BOTH guests and logged-in users
 router.post('/:id/aftercare', optionalAuth, sendToAftercare);
 
+// ✅ NEW — Cancel Request
+// Registered in the PUBLIC section (before protect wall) so guests can call it
+// without a JWT token. Ownership is verified inside the controller via guestId.
+// optionalAuth populates req.user if a valid token is present so logged-in
+// users also get the correct ownership check inside the controller.
+router.patch('/:id/cancel', optionalAuth, cancelRequest);
+
 // GET single request — public with optionalAuth (guests need this for tracking)
-// Registered here (before protect) so unauthenticated guests are not blocked.
-// Named routes like /nearby, /my-requests etc. are registered below with protect
-// and will NOT be caught here because Express matches fixed-string routes first.
-// However to be 100% safe we explicitly guard against known named paths.
 router.get('/:id', optionalAuth, async (req, res, next) => {
   // Skip this handler for named sub-paths — let them fall through to protected routes
   const named = ['nearby', 'my-requests', 'my-accepted', 'admin', 'track'];
@@ -126,19 +124,23 @@ router.get('/:id', optionalAuth, async (req, res, next) => {
     }
 
     return res.json({
-      _id:           request._id,
-      publicId:      request.publicId,   // ✅ NEW — always include publicId
-      status:        request.status,
-      location:      request.location,
-      requesterType: request.requesterType,
-      isSOS:         request.isSOS,
-      isGuest:       request.isGuest,
-      category:      request.category,
-      title:         request.title,
-      description:   request.description,
-      urgency:       request.urgency,
-      isEnhanced:    request.isEnhanced,
-      media:         request.media,
+      _id:                request._id,
+      publicId:           request.publicId,
+      status:             request.status,
+      location:           request.location,
+      requesterType:      request.requesterType,
+      isSOS:              request.isSOS,
+      isGuest:            request.isGuest,
+      category:           request.category,
+      title:              request.title,
+      description:        request.description,
+      urgency:            request.urgency,
+      isEnhanced:         request.isEnhanced,
+      media:              request.media,
+      // ✅ NEW — include cancellation data so frontend can react correctly
+      cancelledBy:        request.cancelledBy,
+      cancellationReason: request.cancellationReason,
+      cancelledAt:        request.cancelledAt,
       helper: request.acceptedBy
         ? {
             name:     request.acceptedBy.name,
@@ -156,7 +158,6 @@ router.get('/:id', optionalAuth, async (req, res, next) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SECTION 2 — PROTECTED (require valid JWT)
-// router.use(protect) applies to all routes registered after this line.
 // ─────────────────────────────────────────────────────────────────────────────
 router.use(protect);
 
@@ -185,11 +186,10 @@ router.patch('/:id/accept',   acceptRequest);
 router.patch('/:id/complete', completeRequest);
 router.post('/:id/rate',      rateHelper);
 
-// ✅ NEW — Medical profile transfer: logged-in users only, explicit consent required
-// Placed inside the protect wall so guests can never call it.
+// ✅ Medical profile transfer: logged-in users only
 router.post('/aftercare/profile', sendMedicalProfile);
 
-// PUT /:id — update/enhance request (auth required, all fields optional)
+// PUT /:id — update/enhance request
 router.put('/:id', upload.array('images', 3), updateRequestValidation, validateRequest, updateRequest);
 
 module.exports = router;

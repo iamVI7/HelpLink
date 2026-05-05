@@ -4,8 +4,10 @@ import { useRequests } from '../context/RequestContext';
 import io from 'socket.io-client';
 import toast from 'react-hot-toast';
 import api from '../services/api';
-// ✅ NEW — Aftercare Bridge
+// ✅ Aftercare Bridge
 import AftercareButton from '../components/AftercareButton';
+// ✅ NEW — Cancel Request Modal
+import CancelRequestModal from '../components/CancelRequestModal';
 
 // Image source of truth helper
 const getImages = (req) => {
@@ -16,11 +18,7 @@ const getImages = (req) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ✅ NEW — PublicIdLookup
-// Standalone search bar that lets a guest enter an HL-REQ-XXXXXX code and
-// fetch the corresponding request. Rendered only when no requestId is in the
-// URL (i.e. the user navigated directly to /tracking without an ID).
-// Does NOT affect any existing tracking logic.
+// PublicIdLookup
 // ─────────────────────────────────────────────────────────────────────────────
 const PublicIdLookup = () => {
   const navigate = useNavigate();
@@ -51,8 +49,6 @@ const PublicIdLookup = () => {
         return;
       }
 
-      // Redirect to the existing guest tracking page using the Mongo _id
-      // so ALL existing socket / polling / photo-upload logic continues to work.
       navigate(`/tracking/${res.data._id}`);
     } catch (err) {
       const msg = err.response?.data?.message || 'No request found with that ID.';
@@ -63,176 +59,153 @@ const PublicIdLookup = () => {
   };
 
   return (
-    <div
-      className="min-h-screen w-full flex flex-col items-center justify-center px-4 py-8"
-      style={{
-        background: 'linear-gradient(145deg, #fff7f7 0%, #ffffff 40%, #f0fdf4 100%)',
-        fontFamily: "'Outfit', 'Helvetica Neue', sans-serif",
-      }}
-    >
+    <div style={{
+      minHeight: '100vh', width: '100%',
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      padding: '2rem 1rem', background: '#f9f9f9',
+      fontFamily: "'Outfit', 'Helvetica Neue', sans-serif",
+    }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap');
-        @keyframes gt_fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes gt_pulse  { 0%,100%{opacity:1} 50%{opacity:0.22} }
-        @keyframes gt_borderGlow { 0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,0)} 50%{box-shadow:0 0 0 5px rgba(220,38,38,0.08)} }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
         @keyframes spin { to{transform:rotate(360deg)} }
-        .lookup-card { animation: gt_fadeUp 0.5s cubic-bezier(0.22,1,0.36,1) both; }
+        .lookup-card { animation: fadeUp 0.5s cubic-bezier(0.22,1,0.36,1) both; }
         .lookup-input {
-          width: 100%; padding: 0.6rem 0.875rem;
-          border: 1.5px solid rgba(0,0,0,0.1); border-radius: 0.625rem;
-          background: #ffffff; color: #1a1714;
-          font-size: 0.875rem; font-family: monospace; letter-spacing: 0.08em;
+          width: 100%; padding: 0.75rem 1rem;
+          border: 1.5px solid #e5e7eb; border-radius: 0.75rem;
+          background: #fff; color: #111827;
+          font-size: 0.9rem; font-family: monospace; letter-spacing: 0.08em;
           outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+          box-sizing: border-box;
         }
-        .lookup-input:focus {
-          border-color: rgba(220,38,38,0.5);
-          box-shadow: 0 0 0 3px rgba(220,38,38,0.08);
-        }
-        .lookup-input::placeholder { color: #a8a29e; font-family: monospace; letter-spacing: 0.06em; }
+        .lookup-input:focus { border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,0.08); }
+        .lookup-input::placeholder { color: #9ca3af; }
         .lookup-btn {
-          width: 100%; padding: 0.6rem 1.5rem;
-          background: #dc2626; color: #fff; border: none; border-radius: 0.625rem;
-          font-size: 0.72rem; font-weight: 800; text-transform: uppercase;
-          letter-spacing: 0.14em; cursor: pointer;
+          width: 100%; padding: 0.8rem 1.5rem;
+          background: #dc2626; color: #fff; border: none; border-radius: 0.75rem;
+          font-size: 0.8rem; font-weight: 700; text-transform: uppercase;
+          letter-spacing: 0.12em; cursor: pointer;
           transition: background 0.15s, box-shadow 0.15s, transform 0.12s;
         }
-        .lookup-btn:hover:not(:disabled) {
-          background: #b91c1c;
-          box-shadow: 0 4px 16px rgba(220,38,38,0.28);
-          transform: translateY(-1px);
-        }
+        .lookup-btn:hover:not(:disabled) { background: #b91c1c; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(220,38,38,0.28); }
         .lookup-btn:disabled { opacity: 0.6; cursor: not-allowed; }
       `}</style>
 
-      {/* Brand strip */}
-      <div className="lookup-card flex justify-center mb-5">
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: '0.6rem',
-          padding: '6px 18px 6px 12px',
-          background: 'rgba(220,38,38,0.07)', border: '1px solid rgba(220,38,38,0.18)',
-          borderRadius: '999px', animation: 'gt_borderGlow 2.5s ease-in-out infinite',
-          backdropFilter: 'blur(6px)',
-        }}>
-          <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#ef4444', animation: 'gt_pulse 1.3s ease-in-out infinite', flexShrink: 0, boxShadow: '0 0 6px rgba(239,68,68,0.5)' }} />
-          <span style={{ fontSize: '0.58rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.2em', color: '#dc2626' }}>
-            HelpLink · Track Request
-          </span>
-        </div>
-      </div>
-
-      {/* Card */}
-      <div
-        className="lookup-card w-full"
-        style={{
-          maxWidth: 420,
-          background: 'rgba(255,255,255,0.9)',
-          border: '1px solid rgba(255,255,255,0.9)',
-          borderRadius: '1.5rem',
-          padding: '1.5rem 1.75rem 1.25rem',
-          backdropFilter: 'blur(20px)',
-          boxShadow: '0 4px 6px rgba(0,0,0,0.03), 0 16px 48px rgba(0,0,0,0.07), 0 32px 80px rgba(220,38,38,0.04)',
-        }}
-      >
-        <div className="text-center mb-4">
-          <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔍</div>
+      <div className="lookup-card" style={{ width: '100%', maxWidth: 440 }}>
+        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🔍</div>
           <h1 style={{
             fontFamily: "'Playfair Display', Georgia, serif",
-            fontSize: 'clamp(1.25rem, 4vw, 1.5rem)',
-            color: '#111827', lineHeight: 1.2,
-            marginBottom: '0.4rem', letterSpacing: '-0.02em',
+            fontSize: 'clamp(1.4rem, 4vw, 1.75rem)', color: '#111827',
+            marginBottom: '0.5rem', letterSpacing: '-0.02em',
           }}>
             Track your <span style={{ color: '#dc2626', fontStyle: 'italic' }}>request.</span>
           </h1>
-          <p style={{ fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.6, margin: 0 }}>
-            Enter your HelpLink request ID to check its status and see assigned helper details.
+          <p style={{ fontSize: '0.85rem', color: '#6b7280', lineHeight: 1.6, margin: 0 }}>
+            Enter your HelpLink request ID to check its status.
           </p>
         </div>
 
-        <form onSubmit={handleLookup} style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-          <div>
-            <label style={{
-              display: 'block', fontSize: '0.6rem', fontWeight: 700,
-              textTransform: 'uppercase', letterSpacing: '0.16em',
-              color: '#78716c', marginBottom: '0.5rem',
-            }}>
-              Request ID
-            </label>
-            <input
-              type="text"
-              className="lookup-input"
-              placeholder="HL-REQ-000001"
-              value={input}
-              onChange={(e) => {
-                setInput(e.target.value);
-                if (error) setError(null);
-              }}
-              autoComplete="off"
-              spellCheck={false}
-              maxLength={16}
-            />
-          </div>
-
-          {error && (
-            <div style={{
-              padding: '0.625rem 0.875rem',
-              background: 'rgba(254,242,242,0.9)',
-              border: '1px solid rgba(220,38,38,0.2)',
-              borderRadius: '0.5rem',
-              fontSize: '0.75rem',
-              color: '#b91c1c',
-              fontWeight: 500,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-            }}>
-              <span>⚠️</span>
-              <span>{error}</span>
-            </div>
-          )}
-
-          <button type="submit" disabled={loading || !input.trim()} className="lookup-btn">
-            {loading ? (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-                  style={{ animation: 'spin 0.85s linear infinite' }}>
-                  <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
-                  <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
-                </svg>
-                Looking up…
-              </span>
-            ) : 'Track Request →'}
-          </button>
-        </form>
-
-        <p style={{
-          textAlign: 'center', marginTop: '0.875rem',
-          fontSize: '0.65rem', color: '#9ca3af', lineHeight: 1.5,
+        <div style={{
+          background: '#fff', borderRadius: '1.25rem', padding: '1.75rem',
+          border: '1px solid #f0f0f0', boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
         }}>
-          Your ID looks like <span style={{ fontFamily: 'monospace', color: '#57534e' }}>HL-REQ-000001</span>
-          <br />It was shown when you first sent your SOS or request.
-        </p>
-      </div>
+          <form onSubmit={handleLookup} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#9ca3af', marginBottom: '0.5rem' }}>
+                Request ID
+              </label>
+              <input
+                type="text" className="lookup-input"
+                placeholder="HL-REQ-000001" value={input}
+                onChange={(e) => { setInput(e.target.value); if (error) setError(null); }}
+                autoComplete="off" spellCheck={false} maxLength={16}
+              />
+            </div>
+            {error && (
+              <div style={{ padding: '0.625rem 0.875rem', background: '#fef2f2', border: '1px solid rgba(220,38,38,0.2)', borderRadius: '0.625rem', fontSize: '0.78rem', color: '#b91c1c', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span>⚠️</span><span>{error}</span>
+              </div>
+            )}
+            <button type="submit" disabled={loading || !input.trim()} className="lookup-btn">
+              {loading ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: 'spin 0.85s linear infinite' }}>
+                    <circle cx="12" cy="12" r="10" strokeOpacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round"/>
+                  </svg>
+                  Looking up…
+                </span>
+              ) : 'Track Request →'}
+            </button>
+          </form>
+          <p style={{ textAlign: 'center', marginTop: '1rem', fontSize: '0.7rem', color: '#9ca3af', lineHeight: 1.5 }}>
+            Your ID looks like <span style={{ fontFamily: 'monospace', color: '#57534e' }}>HL-REQ-000001</span><br />
+            It was shown when you first sent your SOS.
+          </p>
+        </div>
 
-      <p style={{ marginTop: '1rem', fontSize: '0.62rem', color: '#d1d5db', textAlign: 'center' }}>
-        Life-threatening?{' '}
-        <strong style={{ color: '#dc2626' }}>Call 112 immediately.</strong>
-      </p>
+        <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'center' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '6px 14px', borderRadius: 999, background: '#fef2f2', border: '1px solid rgba(220,38,38,0.18)', fontSize: '0.68rem', color: '#b91c1c', fontWeight: 500 }}>
+            <span>⚠️</span>
+            <span>Life-threatening?</span>
+            <a href="tel:112" style={{ fontWeight: 800, color: '#dc2626', textDecoration: 'none' }}>Call 112</a>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
-// ── END: PublicIdLookup ────────────────────────────────────────────────────────
 
-// ── GuestTracking ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Activity Feed Item
+// ─────────────────────────────────────────────────────────────────────────────
+const ActivityItem = ({ icon, iconBg, iconColor, label, sublabel, time, isFirst }) => (
+  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.875rem', position: 'relative' }}>
+    <div style={{
+      width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
+      background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      zIndex: 1, boxShadow: isFirst ? '0 0 0 4px rgba(220,38,38,0.08)' : 'none',
+    }}>
+      {typeof icon === 'string' ? (
+        <span style={{ fontSize: '1rem' }}>{icon}</span>
+      ) : (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          {icon}
+        </svg>
+      )}
+    </div>
+    <div style={{ flex: 1, paddingTop: '0.45rem' }}>
+      <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: 600, color: '#111827' }}>{label}</p>
+      {sublabel && <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: '#9ca3af' }}>{sublabel}</p>}
+    </div>
+    {time && (
+      <div style={{ paddingTop: '0.5rem', fontSize: '0.75rem', color: '#9ca3af', fontWeight: 500, flexShrink: 0 }}>{time}</div>
+    )}
+    {isFirst && (
+      <div style={{
+        paddingTop: '0.45rem',
+        display: 'inline-flex', alignItems: 'center',
+        background: '#dc2626', borderRadius: 4,
+        padding: '2px 7px',
+        fontSize: '0.6rem', fontWeight: 800, color: '#fff',
+        letterSpacing: '0.1em', textTransform: 'uppercase',
+        height: 'fit-content', flexShrink: 0,
+      }}>LIVE</div>
+    )}
+  </div>
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GuestTracking
+// ─────────────────────────────────────────────────────────────────────────────
 const GuestTracking = () => {
   const { requestId } = useParams();
 
-  // ✅ NEW — if no requestId in URL, show the public ID lookup UI instead
-  if (!requestId) {
-    return <PublicIdLookup />;
-  }
+  if (!requestId) return <PublicIdLookup />;
 
-  // ✅ Read guidance passed via navigation state (set by LandingPage after SOS)
-  const location = useLocation();
+  const location       = useLocation();
+  const navigate       = useNavigate();
   const guidanceFromNav = location.state?.guidance || null;
 
   const { requestStatus, setRequestStatus } = useRequests();
@@ -243,18 +216,35 @@ const GuestTracking = () => {
     return saved ? JSON.parse(saved) : null;
   });
 
-  // Request data fetched from backend — single source of truth for image state
-  const [requestData, setRequestData] = useState(null);
+  const [requestData,    setRequestData]    = useState(null);
   const [photoUploading, setPhotoUploading] = useState(false);
+  const [isCompleted,    setIsCompleted]    = useState(false);
+  const [isCancelled,    setIsCancelled]    = useState(false);
+
+  // ── Cancel modal state ────────────────────────────────────────────────────
+  const [showCancelModal,  setShowCancelModal]  = useState(false);
+  const [cancelLoading,    setCancelLoading]    = useState(false);
+  // ─────────────────────────────────────────────────────────────────────────
+
   const photoInputRef = useRef(null);
 
-  // ✅ NEW — track whether the SOS has been completed (for aftercare button)
-  const [isCompleted, setIsCompleted] = useState(false);
+  // Activity feed simulation
+  const [notifiedCount, setNotifiedCount] = useState(0);
+  const [nearbyHelper,  setNearbyHelper]  = useState(null);
+  const [t2, setT2] = useState(null);
+  const [t3, setT3] = useState(null);
 
-  // Derive image state from backend response
   const images   = getImages(requestData);
   const hasImage = images.length > 0;
 
+  // Simulate activity feed progression (only while searching)
+  useEffect(() => {
+    const t  = setTimeout(() => { setNotifiedCount(2); setT2(8); }, 8000);
+    const t2h = setTimeout(() => { setNearbyHelper({ distance: '1.2 km' }); setT3(12); }, 12000);
+    return () => { clearTimeout(t); clearTimeout(t2h); };
+  }, []);
+
+  // ── Socket ────────────────────────────────────────────────────────────────
   useEffect(() => {
     let guestId = localStorage.getItem('guestId');
     if (!guestId) {
@@ -293,10 +283,17 @@ const GuestTracking = () => {
       if (acceptedId === requestId) setRequestStatus('accepted');
     });
 
-    // ✅ NEW — listen for completion so we can show the aftercare button
     socket.on('sos_completed', (data) => {
       if (data?.requestId === requestId || data?.requestId?.toString() === requestId) {
         setIsCompleted(true);
+      }
+    });
+
+    // ✅ NEW — listen for server-side cancellation (e.g. admin cancels)
+    socket.on('request_cancelled', (data) => {
+      if (data?.requestId === requestId || data?.requestId?.toString() === requestId) {
+        setIsCancelled(true);
+        setRequestStatus('searching'); // reset so UI re-evaluates
       }
     });
 
@@ -305,7 +302,7 @@ const GuestTracking = () => {
     return () => { socket.disconnect(); socketRef.current = null; };
   }, [requestId, setRequestStatus]);
 
-  // ✅ fetchRequest: passes guestId so backend returns real image URLs for guest owner
+  // ── Poll ──────────────────────────────────────────────────────────────────
   const fetchRequest = useCallback(async () => {
     try {
       const guestId = localStorage.getItem('guestId') || '';
@@ -314,13 +311,13 @@ const GuestTracking = () => {
       });
       if (!res.data) return;
       const data = res.data;
-
       setRequestData(data);
 
-      if (data.status === 'completed') {
-        // ✅ NEW — also set completed state from polling (handles page refresh)
+      if (data.status === 'cancelled') {
+        setIsCancelled(true);
+      } else if (data.status === 'completed') {
         setIsCompleted(true);
-        setRequestStatus('accepted'); // keep pill green
+        setRequestStatus('accepted');
       } else if (data.status === 'accepted') {
         setRequestStatus('accepted');
       } else {
@@ -336,7 +333,6 @@ const GuestTracking = () => {
     }
   }, [requestId, setRequestStatus]);
 
-  // Initial fetch + polling every 8s to keep status and image in sync
   const pollRef = useRef(null);
   useEffect(() => {
     if (!requestId) return;
@@ -345,325 +341,458 @@ const GuestTracking = () => {
     return () => clearInterval(pollRef.current);
   }, [fetchRequest, requestId]);
 
-  // Guest photo upload — uses /guest-image endpoint (no auth required)
+  // ── Photo upload ──────────────────────────────────────────────────────────
   const handleGuestPhotoUpload = useCallback(async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    if (hasImage) {
-      toast.error('You can only add one photo as a guest.');
-      return;
-    }
+    if (hasImage) { toast.error('You can only add one photo as a guest.'); return; }
 
     setPhotoUploading(true);
     try {
       const formData = new FormData();
       formData.append('images', file);
-
       await api.put(`/requests/${requestId}/guest-image`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-
-      // Re-fetch from backend with guestId so image URLs are not stripped
       await fetchRequest();
-
       toast.success('Photo added to your SOS request!');
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to add photo.';
-      toast.error(msg);
+      toast.error(err.response?.data?.message || 'Failed to add photo.');
     } finally {
       setPhotoUploading(false);
       if (photoInputRef.current) photoInputRef.current.value = '';
     }
   }, [requestId, hasImage, fetchRequest]);
 
-  const isSearching = requestStatus === 'searching';
-  const isAccepted  = requestStatus === 'accepted';
+  // ── ✅ Cancel handler — called by CancelRequestModal with a reason string ─
+  const handleCancelConfirm = useCallback(async (reason) => {
+    setCancelLoading(true);
+    try {
+      const guestId = localStorage.getItem('guestId') || '';
+      await api.patch(
+        `/requests/${requestId}/cancel`,
+        { reason },
+        { params: guestId ? { guestId } : {} }
+      );
+      setShowCancelModal(false);
+      setIsCancelled(true);
+      // Stop polling — no need to keep fetching a cancelled request
+      if (pollRef.current) clearInterval(pollRef.current);
+      toast.success('Your request has been cancelled.');
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Could not cancel request. Please try again.';
+      toast.error(msg);
+    } finally {
+      setCancelLoading(false);
+    }
+  }, [requestId]);
+  // ── END: Cancel handler ───────────────────────────────────────────────────
 
-  // ✅ NEW — publicId from fetched request data (shown as watermark)
-  const publicId = requestData?.publicId || null;
+  const isSearching = requestStatus === 'searching' && !isCancelled;
+  const isAccepted  = requestStatus === 'accepted'  && !isCancelled && !isCompleted;
+  const publicId    = requestData?.publicId || null;
+
+  const fmtSec = (s) => `${String(Math.floor(s / 60)).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}`;
 
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-center px-4 sm:px-6 py-8 relative overflow-hidden"
-      style={{
-        background: 'linear-gradient(145deg, #fff7f7 0%, #ffffff 40%, #f0fdf4 100%)',
+    <>
+      {/* ── Cancel Modal (portal-like, renders above everything) ── */}
+      <CancelRequestModal
+        isOpen={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        onConfirm={handleCancelConfirm}
+        isLoading={cancelLoading}
+      />
+
+      <div style={{
+        minHeight: '100vh', width: '100%',
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', background: '#f9f9f9',
         fontFamily: "'Outfit', 'Helvetica Neue', sans-serif",
-      }}
-    >
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap');
-        @keyframes gt_fadeUp  { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes gt_ripple  { 0%{transform:scale(0.85);opacity:0.55} 100%{transform:scale(2.8);opacity:0} }
-        @keyframes gt_checkPop { 0%{transform:scale(0);opacity:0} 65%{transform:scale(1.2);opacity:1} 100%{transform:scale(1);opacity:1} }
-        @keyframes gt_pulse   { 0%,100%{opacity:1} 50%{opacity:0.22} }
-        @keyframes gt_borderGlow { 0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,0)} 50%{box-shadow:0 0 0 5px rgba(220,38,38,0.08)} }
-        @keyframes gt_scan    { 0%{transform:translateY(-100%);opacity:0.55} 50%{opacity:0.15} 100%{transform:translateY(400%);opacity:0} }
-        @keyframes gt_cardIn  { from{opacity:0;transform:translateY(28px) scale(0.97)} to{opacity:1;transform:translateY(0) scale(1)} }
-        @keyframes gt_shimmer { 0%{background-position:-200% center} 100%{background-position:200% center} }
-        @keyframes gt_float   { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-5px)} }
-        @keyframes gt_bgMove  { 0%{transform:translate(0,0) rotate(0deg)} 100%{transform:translate(40px,40px) rotate(3deg)} }
-        @keyframes gt_bgMoveAlt { 0%{transform:translate(0,0) rotate(0deg)} 100%{transform:translate(-30px,-30px) rotate(-2deg)} }
-        .gt-card   { animation: gt_cardIn 0.5s cubic-bezier(0.22,1,0.36,1) both; }
-        .gt-card-1 { animation: gt_cardIn 0.5s 0.1s cubic-bezier(0.22,1,0.36,1) both; }
-        .gt-card-2 { animation: gt_cardIn 0.5s 0.2s cubic-bezier(0.22,1,0.36,1) both; }
-        .gt-ripple { position:absolute;inset:0;border-radius:50%;border:1.5px solid rgba(220,38,38,0.3);animation:gt_ripple 2.2s ease-out infinite; }
-        .gt-ripple-2 { animation-delay:0.73s; }
-        .gt-ripple-3 { animation-delay:1.46s; }
-        .gt-icon-float { animation:gt_float 3s ease-in-out infinite; }
-        .gt-shimmer-text {
-          background:linear-gradient(90deg,#dc2626 0%,#f87171 40%,#dc2626 80%,#b91c1c 100%);
-          background-size:200% auto; -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-          background-clip:text; animation:gt_shimmer 3s linear infinite;
-        }
-        .gt-divider-line { height:1px; background:linear-gradient(90deg,transparent,rgba(0,0,0,0.07),transparent); }
-        .gt-card-shadow {
-          box-shadow: 0 1px 0 rgba(255,255,255,0.9) inset, 0 -1px 0 rgba(0,0,0,0.04) inset,
-            0 4px 6px rgba(0,0,0,0.03), 0 16px 48px rgba(0,0,0,0.07), 0 32px 80px rgba(220,38,38,0.05);
-        }
-      `}</style>
+        padding: '0 0 2rem',
+      }}>
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap');
+          @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+          @keyframes ripple { 0%{transform:scale(0.8);opacity:0.5} 100%{transform:scale(2.6);opacity:0} }
+          @keyframes checkPop { 0%{transform:scale(0)} 65%{transform:scale(1.25)} 100%{transform:scale(1)} }
+          @keyframes spin { to{transform:rotate(360deg)} }
+          @keyframes shimmer { 0%{background-position:-200% center} 100%{background-position:200% center} }
+          .fade-up   { animation: fadeUp 0.5s cubic-bezier(0.22,1,0.36,1) both; }
+          .fade-up-1 { animation: fadeUp 0.5s 0.1s cubic-bezier(0.22,1,0.36,1) both; }
+          .fade-up-2 { animation: fadeUp 0.5s 0.2s cubic-bezier(0.22,1,0.36,1) both; }
+          .fade-up-3 { animation: fadeUp 0.5s 0.3s cubic-bezier(0.22,1,0.36,1) both; }
+          .fade-up-4 { animation: fadeUp 0.5s 0.4s cubic-bezier(0.22,1,0.36,1) both; }
+          .ripple-ring   { position:absolute;inset:0;border-radius:50%;border:2px solid rgba(220,38,38,0.25);animation:ripple 2.4s ease-out infinite; }
+          .ripple-ring-2 { animation-delay: 0.8s; }
+          .ripple-ring-3 { animation-delay: 1.6s; }
+          .shimmer-text {
+            background: linear-gradient(90deg, #dc2626 0%, #f87171 40%, #dc2626 80%, #b91c1c 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text; animation: shimmer 3s linear infinite;
+          }
+          .cta-call {
+            width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.75rem;
+            padding: 1rem; border-radius: 1rem;
+            background: #dc2626; color: #fff; text-decoration: none;
+            font-size: 1rem; font-weight: 700; border: none; cursor: pointer;
+            transition: background 0.15s, box-shadow 0.15s, transform 0.12s;
+            box-shadow: 0 4px 16px rgba(220,38,38,0.3);
+          }
+          .cta-call:hover { background: #b91c1c; transform: translateY(-1px); box-shadow: 0 6px 24px rgba(220,38,38,0.4); }
 
-      {/* Atmospheric background */}
-      <div aria-hidden="true" className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div style={{ position:'absolute',inset:0,backgroundImage:'radial-gradient(circle, rgba(0,0,0,0.07) 1px, transparent 1px)',backgroundSize:'28px 28px' }} />
-        <div style={{ position:'absolute',top:'-20%',left:'-12%',width:'60vw',height:'60vw',borderRadius:'50%',background:'radial-gradient(circle, rgba(254,202,202,0.55) 0%, transparent 65%)',animation:'gt_bgMove 14s ease-in-out infinite alternate' }} />
-        <div style={{ position:'absolute',bottom:'-15%',right:'-12%',width:'50vw',height:'50vw',borderRadius:'50%',background:'radial-gradient(circle, rgba(187,247,208,0.45) 0%, transparent 65%)',animation:'gt_bgMoveAlt 17s ease-in-out infinite alternate-reverse' }} />
-        <div style={{ position:'absolute',top:'-5%',right:'-8%',width:'35vw',height:'35vw',borderRadius:'50%',background:'radial-gradient(circle, rgba(254,240,138,0.25) 0%, transparent 65%)' }} />
-      </div>
+          /* Cancel button — active (only when request is still open/searching) */
+          .cta-cancel {
+            width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+            padding: 0.95rem; border-radius: 1rem;
+            background: #fff; color: #dc2626;
+            font-size: 0.9rem; font-weight: 600; border: 1.5px solid #e5e7eb; cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
+          }
+          .cta-cancel:hover { border-color: rgba(220,38,38,0.4); background: #fef2f2; }
 
-      <div className="relative z-10 w-full max-w-sm sm:max-w-md">
+          /* Cancel button — disabled state (accepted / completed) */
+          .cta-cancel-disabled {
+            width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+            padding: 0.95rem; border-radius: 1rem;
+            background: #f9fafb; color: #9ca3af;
+            font-size: 0.9rem; font-weight: 500; border: 1.5px solid #e5e7eb;
+            cursor: not-allowed; opacity: 0.6;
+          }
+        `}</style>
 
-        {/* ── REMOVED: "HelpLink · SOS Active" brand strip above the card ── */}
+        <div style={{ width: '100%', maxWidth: 480, padding: '2rem 1.25rem 1rem' }}>
 
-        {/* Main card */}
-        <div className="gt-card-1 gt-card-shadow rounded-3xl overflow-hidden"
-          style={{ background:'rgba(255,255,255,0.85)',border:'1px solid rgba(255,255,255,0.9)',backdropFilter:'blur(20px)' }}>
-
-          <div className="px-5 sm:px-7 pt-6 sm:pt-8 pb-4 sm:pb-6">
-
-            {/* Status icon */}
-            <div className="flex justify-center mb-5 sm:mb-6">
-              <div className="gt-icon-float relative" style={{ width:80,height:80 }}>
-                {isSearching && (<><div className="gt-ripple"/><div className="gt-ripple gt-ripple-2"/><div className="gt-ripple gt-ripple-3"/></>)}
-                {isSearching && (
-                  <div style={{ position:'absolute',inset:0,borderRadius:'50%',overflow:'hidden',zIndex:1 }}>
-                    <div style={{ position:'absolute',left:0,right:0,height:'28%',background:'linear-gradient(180deg,transparent,rgba(220,38,38,0.18),transparent)',animation:'gt_scan 2.4s ease-in-out infinite' }} />
-                  </div>
-                )}
-                <div style={{
-                  position:'relative',zIndex:2,width:80,height:80,borderRadius:'50%',
-                  background: isCompleted
-                    ? 'radial-gradient(circle at 35% 35%, rgba(74,222,128,0.25), rgba(240,253,244,0.9))'
-                    : isAccepted
-                    ?'radial-gradient(circle at 35% 35%, rgba(74,222,128,0.25), rgba(240,253,244,0.9))'
-                    :'radial-gradient(circle at 35% 35%, rgba(254,202,202,0.6), rgba(255,247,247,0.9))',
-                  border:`1.5px solid ${isAccepted||isCompleted?'rgba(74,222,128,0.45)':'rgba(220,38,38,0.25)'}`,
-                  display:'flex',alignItems:'center',justifyContent:'center',fontSize:30,transition:'all 0.6s ease',
-                  boxShadow: isAccepted||isCompleted
-                    ?'0 0 0 10px rgba(21,128,61,0.06), 0 6px 24px rgba(21,128,61,0.18)'
-                    :'0 0 0 10px rgba(220,38,68,0.04), 0 6px 24px rgba(220,38,38,0.12)',
-                }}>
-                  <span style={{ animation:isAccepted||isCompleted?'gt_checkPop 0.45s ease both':'none' }}>
-                    {isCompleted ? '✅' : isAccepted ? '✅' : '🔍'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Heading */}
-            <div className="text-center mb-4 sm:mb-5">
-              <h1 style={{ fontFamily:"'Playfair Display',Georgia,serif",fontSize:'clamp(1.4rem,5vw,1.75rem)',lineHeight:1.15,letterSpacing:'-0.025em',color:'#111827',marginBottom:'0.5rem' }}>
-                {isCompleted ? (
-                  <span style={{ color:'#15803d' }}>Help has arrived.</span>
-                ) : isAccepted ? (
-                  <span style={{ color:'#15803d' }}>Helper found.</span>
-                ) : (
-                  <>Alerting{' '}<span className="gt-shimmer-text" style={{ fontStyle:'italic' }}>nearby</span><br />helpers…</>
-                )}
-              </h1>
-              <p style={{ fontSize:'clamp(0.78rem,2.5vw,0.85rem)',color:'#6b7280',lineHeight:1.7,maxWidth:300,margin:'0 auto' }}>
-                {isCompleted
-                  ? 'Your SOS has been resolved. Thank you for using HelpLink.'
-                  : isAccepted
-                  ? "They're on the way. Stay visible and keep your phone available."
-                  : "Stay in a safe location. You'll be notified the moment a helper accepts."}
-              </p>
-            </div>
-
-            {/* ── REMOVED: "Scanning area…" / "Helper Confirmed" status pill ── */}
-
-            {/* ✅ NEW — Public ID badge so guests can note down their request ID */}
-            {publicId && (
-              <div
-                className="flex justify-center mb-3"
-                style={{ animation: 'gt_fadeUp 0.4s 0.1s ease both' }}
-              >
-                <div style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '5px 12px',
-                  borderRadius: 999,
-                  background: 'rgba(0,0,0,0.03)',
-                  border: '1px solid rgba(0,0,0,0.08)',
-                  fontSize: '0.58rem',
-                  fontWeight: 700,
-                  fontFamily: 'monospace',
-                  letterSpacing: '0.1em',
-                  color: '#78716c',
-                }}>
-                  <span style={{ opacity: 0.5 }}>ID</span>
-                  <span style={{ color: '#1a1714' }}>{publicId}</span>
-                </div>
-              </div>
-            )}
-
-            {/* ✅ NEW — Aftercare button: shown when SOS is completed (guests CAN use aftercare) */}
-            {isCompleted && (
-              <div
-                className="flex justify-center mb-3"
-                style={{ animation: 'gt_fadeUp 0.4s 0.18s ease both' }}
-              >
-                <AftercareButton requestId={requestId} />
-              </div>
-            )}
-
-            {/* ✅ Photo section — show image if already uploaded, else show upload button only when searching */}
-            {!isAccepted && !isCompleted && (
-              <div className="flex justify-center mb-3" style={{ animation:'gt_fadeUp 0.4s 0.2s ease both' }}>
-                {hasImage ? (
-                  // Image was sent with SOS or uploaded after — show it
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="rounded-2xl overflow-hidden border border-stone-100" style={{ boxShadow:'0 2px 12px rgba(0,0,0,0.07)' }}>
-                      <img
-                        src={images[0].url}
-                        alt="SOS photo"
-                        style={{ width: 120, height: 84, objectFit: 'cover', display: 'block' }}
-                      />
-                    </div>
-                    <p style={{ fontSize:'0.62rem',color:'#22c55e',margin:0,fontWeight:600 }}>✓ Photo visible to responders</p>
-                  </div>
-                ) : (
-                  // No image yet — show upload button
-                  <div className="flex flex-col items-center gap-2">
-                    <button
-                      type="button"
-                      disabled={photoUploading}
-                      onClick={() => photoInputRef.current?.click()}
-                      style={{
-                        display:'inline-flex',alignItems:'center',gap:'0.5rem',padding:'8px 18px',
-                        borderRadius:999,background:'rgba(255,255,255,0.9)',
-                        border:'1px dashed rgba(220,38,38,0.3)',color:'#78716c',
-                        fontSize:'0.72rem',fontWeight:600,
-                        cursor:photoUploading?'default':'pointer',
-                        opacity:photoUploading?0.6:1,transition:'all 0.2s ease',
-                      }}
-                    >
-                      {photoUploading ? (
-                        <>
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-                            style={{ animation:'gt_pulse 1s ease infinite' }}>
-                            <circle cx="12" cy="12" r="10" strokeOpacity="0.25"/>
-                            <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round"/>
-                          </svg>
-                          Uploading…
-                        </>
-                      ) : (
-                        <>
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                            <circle cx="12" cy="13" r="4"/>
-                          </svg>
-                          + Add photo{' '}
-                          <span style={{ fontWeight:400,fontSize:'0.65rem',opacity:0.7 }}>(optional)</span>
-                        </>
-                      )}
-                    </button>
-                    <p style={{ fontSize:'0.6rem',color:'#9ca3af',margin:0,textAlign:'center' }}>
-                      Helps responders find you faster
-                    </p>
-                    <input
-                      ref={photoInputRef}
-                      type="file"
-                      accept="image/*"
-                      style={{ display:'none' }}
-                      onChange={handleGuestPhotoUpload}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Guidance — from navigation state (passed by LandingPage after SOS) */}
-            {/* ✅ CHANGED: slice to first 3 tips only */}
-            {guidanceFromNav && guidanceFromNav.length > 0 && (
-              <div className="mt-3 px-4 py-3 rounded-2xl"
-                style={{
-                  background:'rgba(255,255,255,0.75)',border:'1px solid rgba(220,38,38,0.12)',
-                  backdropFilter:'blur(10px)',animation:'gt_fadeUp 0.4s ease',
-                }}>
-                <div className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-red-500 mb-2">🚨 Immediate Guidance</div>
-                <ul className="m-0 p-0 list-none text-[0.75rem] text-stone-600 space-y-1.5">
-                  {guidanceFromNav.slice(0, 3).map((tip, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <span className="text-red-400 mt-[2px]">•</span>
-                      <span>{tip}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Helper card */}
-            {isAccepted && helper && (
+          {/* ── Bell / status icon ── */}
+          <div className="fade-up" style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.75rem' }}>
+            <div style={{ position: 'relative', width: 100, height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {isSearching && (<><div className="ripple-ring"/><div className="ripple-ring ripple-ring-2"/><div className="ripple-ring ripple-ring-3"/></>)}
               <div style={{
-                padding:'1rem',background:'rgba(240,253,244,0.8)',border:'1px solid rgba(74,222,128,0.3)',
-                borderRadius:'1rem',animation:'gt_fadeUp 0.4s ease both',
-                boxShadow:'0 4px 16px rgba(21,128,61,0.08)',marginTop:'0.75rem',
+                width: 70, height: 70, borderRadius: '50%', zIndex: 2, position: 'relative',
+                background: isCancelled
+                  ? 'radial-gradient(circle at 35% 35%, #fde8e8, #fff7f7)'
+                  : isCompleted || isAccepted
+                  ? 'radial-gradient(circle at 35% 35%, #bbf7d0, #f0fdf4)'
+                  : 'radial-gradient(circle at 35% 35%, #fecaca, #fff7f7)',
+                border: `1.5px solid ${isCancelled ? 'rgba(220,38,38,0.4)' : isCompleted || isAccepted ? 'rgba(74,222,128,0.5)' : 'rgba(220,38,38,0.3)'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: isCompleted || isAccepted
+                  ? '0 0 0 8px rgba(21,128,61,0.07), 0 6px 24px rgba(21,128,61,0.18)'
+                  : '0 0 0 8px rgba(220,38,68,0.04), 0 6px 24px rgba(220,38,38,0.12)',
+                transition: 'all 0.6s ease',
               }}>
-                <p style={{ fontSize:'0.56rem',fontWeight:800,textTransform:'uppercase',letterSpacing:'0.2em',color:'#15803d',marginBottom:'0.625rem' }}>
-                  Assigned Helper
-                </p>
-                <div className="flex items-center gap-3">
-                  <div style={{
-                    width:40,height:40,borderRadius:'50%',background:'linear-gradient(135deg, #166534, #22c55e)',
-                    border:'1.5px solid rgba(74,222,128,0.4)',display:'flex',alignItems:'center',justifyContent:'center',
-                    color:'#fff',fontWeight:700,fontSize:'1rem',flexShrink:0,boxShadow:'0 4px 12px rgba(21,128,61,0.28)',
-                  }}>
-                    {helper.name?.charAt(0)?.toUpperCase() || '?'}
-                  </div>
-                  <div>
-                    <p style={{ fontWeight:600,color:'#111827',fontSize:'0.875rem',margin:0 }}>{helper.name}</p>
-                    {helper.phone && <p style={{ fontSize:'0.77rem',color:'#6b7280',margin:'3px 0 0' }}>📞 {helper.phone}</p>}
-                  </div>
-                </div>
+                {isCancelled ? (
+                  <span style={{ fontSize: '1.75rem', animation: 'checkPop 0.4s ease both' }}>🚫</span>
+                ) : isCompleted || isAccepted ? (
+                  <span style={{ fontSize: '1.75rem', animation: 'checkPop 0.4s ease both' }}>✅</span>
+                ) : (
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="#dc2626" stroke="none">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/>
+                  </svg>
+                )}
               </div>
-            )}
-
-            {/* Pulse dots when searching */}
-            {isSearching && (
-              <div className="gt-card-2 flex items-center justify-center gap-1.5 mt-4">
-                {[0, 0.2, 0.4].map((delay, i) => (
-                  <div key={i} style={{
-                    width:5,height:5,borderRadius:'50%',background:'rgba(220,38,38,0.35)',
-                    animation:`gt_pulse 1.4s ${delay}s ease-in-out infinite`,
-                  }} />
-                ))}
-              </div>
-            )}
+            </div>
           </div>
 
-          {/* Footer */}
-          <div className="gt-divider-line" />
-          <div className="px-5 sm:px-7 py-3 flex items-center justify-center gap-2" style={{ background:'rgba(255,255,255,0.5)' }}>
-            <div style={{ width:5,height:5,borderRadius:'50%',background:'#ef4444',flexShrink:0,boxShadow:'0 0 5px rgba(239,68,68,0.5)',animation:'gt_pulse 1.5s ease-in-out infinite' }} />
-            <p style={{ fontSize:'0.63rem',color:'#9ca3af',margin:0 }}>
-              Life-threatening?{' '}<strong style={{ color:'#dc2626',fontWeight:700 }}>Call 112 immediately.</strong>
+          {/* ── Heading ── */}
+          <div className="fade-up-1" style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+            <h1 style={{
+              fontFamily: "'Playfair Display', Georgia, serif",
+              fontSize: 'clamp(1.6rem, 5vw, 2rem)', lineHeight: 1.15,
+              letterSpacing: '-0.025em', color: '#111827', marginBottom: '0.625rem',
+            }}>
+              {isCancelled ? (
+                <span style={{ color: '#dc2626' }}>Request cancelled.</span>
+              ) : isCompleted ? (
+                <span style={{ color: '#15803d' }}>Help has arrived.</span>
+              ) : isAccepted ? (
+                <span style={{ color: '#15803d' }}>Helper found.</span>
+              ) : (
+                <>Alerting <span className="shimmer-text" style={{ fontStyle: 'italic' }}>nearby</span><br />helpers…</>
+              )}
+            </h1>
+            <p style={{ fontSize: '0.875rem', color: '#6b7280', lineHeight: 1.7, margin: 0, maxWidth: 320, marginInline: 'auto' }}>
+              {isCancelled
+                ? 'Your request has been cancelled. No helpers will be alerted.'
+                : isCompleted
+                ? 'Your SOS has been resolved. Thank you for using HelpLink.'
+                : isAccepted
+                ? "They're on the way. Stay visible and keep your phone available."
+                : "Stay in a safe location. You'll be notified the moment a helper accepts."}
+            </p>
+          </div>
+
+          {/* ── Public ID badge ── */}
+          {publicId && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+                padding: '4px 12px', borderRadius: 999,
+                background: '#f3f4f6', border: '1px solid #e5e7eb',
+                fontSize: '0.62rem', fontFamily: 'monospace', fontWeight: 700,
+                letterSpacing: '0.1em', color: '#6b7280',
+              }}>
+                <span style={{ opacity: 0.5 }}>ID</span>
+                <span style={{ color: '#111827' }}>{publicId}</span>
+              </div>
+            </div>
+          )}
+
+          {/* ── Aftercare button (completed) ── */}
+          {isCompleted && (
+            <div className="fade-up-2" style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+              <AftercareButton requestId={requestId} />
+            </div>
+          )}
+
+          {/* ── Cancelled state info card ── */}
+          {isCancelled && requestData?.cancellationReason && (
+            <div className="fade-up-2" style={{
+              background: '#fef2f2', border: '1px solid rgba(220,38,38,0.2)',
+              borderRadius: '1.25rem', padding: '1.125rem 1.25rem',
+              marginBottom: '1rem',
+            }}>
+              <p style={{ fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.2em', color: '#dc2626', marginBottom: '0.375rem' }}>
+                Cancellation Reason
+              </p>
+              <p style={{ margin: 0, fontSize: '0.875rem', color: '#7f1d1d', lineHeight: 1.5 }}>
+                {requestData.cancellationReason}
+              </p>
+            </div>
+          )}
+
+          {/* ── Activity Feed Card (searching state only) ── */}
+          {isSearching && (
+            <div className="fade-up-2" style={{
+              background: '#fff', borderRadius: '1.25rem',
+              border: '1px solid #f0f0f0',
+              boxShadow: '0 2px 16px rgba(0,0,0,0.05)',
+              padding: '1.25rem',
+              marginBottom: '1rem',
+              display: 'flex', flexDirection: 'column', gap: '0.875rem',
+            }}>
+              <ActivityItem
+                isFirst
+                icon={<path d="M1.5 8.5c2.9-3.8 7.1-6 10.5-6s7.6 2.2 10.5 6M5 12c1.9-2.3 4.3-3.5 7-3.5s5.1 1.2 7 3.5M8.5 15.5c1-1.2 2.2-1.8 3.5-1.8s2.5.6 3.5 1.8M12 19h.01"/>}
+                iconBg="rgba(220,38,38,0.1)" iconColor="#dc2626"
+                label="Searching for nearby helpers..."
+              />
+              {notifiedCount > 0 && (
+                <div style={{ width: 1, height: 16, background: 'repeating-linear-gradient(to bottom, #d1d5db 0, #d1d5db 4px, transparent 4px, transparent 8px)', marginLeft: 19 }} />
+              )}
+              {notifiedCount > 0 && (
+                <ActivityItem
+                  icon={<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></>}
+                  iconBg="#f3f4f6" iconColor="#6b7280"
+                  label={`${notifiedCount} people notified`}
+                  time={t2 ? fmtSec(t2) : null}
+                />
+              )}
+              {notifiedCount > 0 && nearbyHelper && (
+                <div style={{ width: 1, height: 16, background: 'repeating-linear-gradient(to bottom, #d1d5db 0, #d1d5db 4px, transparent 4px, transparent 8px)', marginLeft: 19 }} />
+              )}
+              {nearbyHelper && (
+                <ActivityItem
+                  icon={<><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></>}
+                  iconBg="rgba(34,197,94,0.12)" iconColor="#16a34a"
+                  label="1 helper nearby"
+                  sublabel={nearbyHelper.distance ? `${nearbyHelper.distance} away` : null}
+                  time={t3 ? fmtSec(t3) : null}
+                />
+              )}
+            </div>
+          )}
+
+          {/* ── Helper card (accepted) ── */}
+          {isAccepted && helper && (
+            <div className="fade-up-2" style={{
+              background: '#f0fdf4', border: '1px solid rgba(74,222,128,0.35)',
+              borderRadius: '1.25rem', padding: '1.25rem',
+              boxShadow: '0 4px 16px rgba(21,128,61,0.08)',
+              marginBottom: '1rem',
+            }}>
+              <p style={{ fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.2em', color: '#15803d', marginBottom: '0.75rem' }}>
+                Assigned Helper
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #166534, #22c55e)',
+                  border: '2px solid rgba(74,222,128,0.4)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#fff', fontWeight: 700, fontSize: '1.1rem', flexShrink: 0,
+                  boxShadow: '0 4px 12px rgba(21,128,61,0.3)',
+                }}>
+                  {helper.name?.charAt(0)?.toUpperCase() || '?'}
+                </div>
+                <div>
+                  <p style={{ fontWeight: 700, color: '#111827', fontSize: '0.9rem', margin: 0 }}>{helper.name}</p>
+                  {helper.phone && <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: '3px 0 0' }}>📞 {helper.phone}</p>}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Quick Guidance Card ── */}
+          {!isCompleted && !isCancelled && (
+            <div className="fade-up-3" style={{
+              background: '#fff', borderRadius: '1.25rem',
+              border: '1px solid #f0f0f0',
+              boxShadow: '0 2px 16px rgba(0,0,0,0.04)',
+              padding: '1.125rem 1.25rem',
+              marginBottom: '1rem',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.875rem' }}>
+                <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(220,38,38,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  </svg>
+                </div>
+                <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#dc2626' }}>Quick guidance</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                {(guidanceFromNav && guidanceFromNav.length > 0 ? guidanceFromNav.slice(0,3) : [
+                  "Stay where you are if it's safe.",
+                  'Keep your phone active.',
+                ]).map((tip, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.625rem' }}>
+                    <div style={{ flexShrink: 0, marginTop: 2 }}>
+                      {i === 0 ? (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                        </svg>
+                      ) : (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.58 3.44 2 2 0 0 1 3.55 1.25h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.84a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 16.92z"/>
+                        </svg>
+                      )}
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#374151', lineHeight: 1.5 }}>{tip}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Photo section ── */}
+          {!isAccepted && !isCompleted && !isCancelled && !hasImage && (
+            <div className="fade-up-3" style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+              <button
+                type="button" disabled={photoUploading}
+                onClick={() => photoInputRef.current?.click()}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+                  padding: '8px 20px', borderRadius: 999,
+                  background: '#fff', border: '1.5px dashed rgba(220,38,38,0.35)',
+                  color: '#9ca3af', fontSize: '0.78rem', fontWeight: 600,
+                  cursor: photoUploading ? 'default' : 'pointer',
+                  opacity: photoUploading ? 0.6 : 1, transition: 'all 0.2s',
+                }}
+              >
+                {photoUploading ? (
+                  <>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: 'spin 0.85s linear infinite' }}>
+                      <circle cx="12" cy="12" r="10" strokeOpacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round"/>
+                    </svg>
+                    Uploading…
+                  </>
+                ) : (
+                  <>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+                    </svg>
+                    + Add photo <span style={{ fontWeight: 400, fontSize: '0.7rem', opacity: 0.7 }}>(optional)</span>
+                  </>
+                )}
+              </button>
+              <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleGuestPhotoUpload} />
+            </div>
+          )}
+
+          {/* ── Photo preview ── */}
+          {!isAccepted && !isCompleted && !isCancelled && hasImage && (
+            <div className="fade-up-3" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+              <div style={{ borderRadius: '1rem', overflow: 'hidden', border: '1px solid rgba(0,0,0,0.07)', boxShadow: '0 2px 12px rgba(0,0,0,0.07)' }}>
+                <img src={images[0].url} alt="SOS photo" style={{ width: 120, height: 84, objectFit: 'cover', display: 'block' }} />
+              </div>
+              <p style={{ fontSize: '0.68rem', color: '#22c55e', margin: 0, fontWeight: 600 }}>✓ Photo visible to responders</p>
+            </div>
+          )}
+
+          {/* ── CTA Buttons ── */}
+          <div className="fade-up-4" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1rem' }}>
+
+            {/* Call 112 — always shown */}
+            <a href="tel:112" className="cta-call">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.58 3.44 2 2 0 0 1 3.55 1.25h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.84a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 16.92z"/>
+              </svg>
+              <div style={{ textAlign: 'left', lineHeight: 1.3 }}>
+                <div style={{ fontWeight: 800, fontSize: '1rem', letterSpacing: '0.04em' }}>CALL 112</div>
+                <div style={{ fontSize: '0.72rem', fontWeight: 400, opacity: 0.85 }}>Life-threatening?</div>
+              </div>
+            </a>
+
+            {/* ── ✅ Cancel button — conditional rendering based on request state ── */}
+            {/* CASE 1: Request is still open/searching → active cancel button */}
+            {isSearching && (
+              <button
+                type="button"
+                className="cta-cancel"
+                onClick={() => setShowCancelModal(true)}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+                Cancel Request
+              </button>
+            )}
+
+            {/* CASE 2: Already accepted → disabled cancel with tooltip-like hint */}
+            {isAccepted && !isCompleted && !isCancelled && (
+              <div className="cta-cancel-disabled" title="Cannot cancel — a helper has already accepted.">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                Cannot cancel — helper assigned
+              </div>
+            )}
+
+            {/* CASE 3: Completed → disabled cancel */}
+            {isCompleted && (
+              <div className="cta-cancel-disabled" title="Request has already been completed.">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Request completed
+              </div>
+            )}
+
+            {/* CASE 4: Already cancelled → show neutral state */}
+            {isCancelled && (
+              <div className="cta-cancel-disabled">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+                Request cancelled
+              </div>
+            )}
+            {/* ── END: Cancel button ── */}
+          </div>
+
+          {/* ── Footer note ── */}
+          <div className="fade-up-4" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem' }}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            <p style={{ margin: 0, fontSize: '0.68rem', color: '#9ca3af', fontWeight: 400 }}>
+              Your location is secure and shared only with responders.
             </p>
           </div>
         </div>
-
       </div>
-    </div>
+    </>
   );
 };
 

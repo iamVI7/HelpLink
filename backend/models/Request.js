@@ -57,7 +57,8 @@ const requestSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['open', 'accepted', 'completed'],
+    // ✅ ADDED 'cancelled' to enum
+    enum: ['open', 'accepted', 'completed', 'cancelled'],
     default: 'open'
   },
   acceptedBy: {
@@ -146,12 +147,7 @@ const requestSchema = new mongoose.Schema({
   },
 
   // ── NEW: Emergency Profile Snapshot ──────────────────────────────────────
-  // Captured at request-creation time from the requester's EmergencyProfile.
-  // Entirely OPTIONAL — null for guests and users without a profile.
-  // Stored as a plain sub-document (not a ref) so it is permanently
-  // preserved even if the user's profile is later updated or deleted.
   emergencyProfileSnapshot: {
-    // From User model
     name:           { type: String,  default: null },
     phoneNumber:    { type: String,  default: null },
     rating:         { type: Number,  default: null },
@@ -159,7 +155,6 @@ const requestSchema = new mongoose.Schema({
     isVerified:     { type: Boolean, default: null },
     address:        { type: String,  default: null },
 
-    // From EmergencyProfile model
     bloodGroup:          { type: String,  default: null },
     allergies:           { type: [String], default: undefined },
     medicalConditions:   { type: [String], default: undefined },
@@ -176,22 +171,14 @@ const requestSchema = new mongoose.Schema({
       default: undefined,
     },
     specialInstructions: { type: String, default: null },
-
-    // Timestamp of when the snapshot was captured
     capturedAt: { type: Date, default: null },
   },
-  // ── END: Emergency Profile Snapshot ──────────────────────────────────────
 
-  // ── NEW: Public Sequential ID fields ─────────────────────────────────────
-  // publicId  — human-readable ID shown to users, e.g. HL-REQ-000001
-  // actorType — mirrors requesterType but uses the new "user"/"guest" naming
-  //             required by the spec; kept separate so requesterType is
-  //             untouched and all existing queries continue to work.
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── Public Sequential ID fields ───────────────────────────────────────────
   publicId: {
     type: String,
     unique: true,
-    sparse: true, // allows null on legacy documents without breaking uniqueness
+    sparse: true,
     default: null,
   },
   actorType: {
@@ -199,7 +186,27 @@ const requestSchema = new mongoose.Schema({
     enum: ['user', 'guest'],
     default: null,
   },
-  // ── END: Public Sequential ID fields ─────────────────────────────────────
+
+  // ── ✅ NEW: Cancellation fields ────────────────────────────────────────────
+  // cancelledBy   — who initiated the cancellation
+  // cancellationReason — reason code selected by the user
+  // cancelledAt   — timestamp of cancellation
+  // ─────────────────────────────────────────────────────────────────────────
+  cancelledBy: {
+    type: String,
+    enum: ['guest', 'user', 'admin'],
+    default: null,
+  },
+  cancellationReason: {
+    type: String,
+    maxlength: [300, 'Cancellation reason cannot exceed 300 characters'],
+    default: null,
+  },
+  cancelledAt: {
+    type: Date,
+    default: null,
+  },
+  // ── END: Cancellation fields ──────────────────────────────────────────────
 
 }, {
   timestamps: true
@@ -210,6 +217,5 @@ requestSchema.index({ location: '2dsphere' });
 requestSchema.index({ status: 1, urgency: -1, createdAt: -1 });
 requestSchema.index({ createdBy: 1, createdAt: -1 });
 requestSchema.index({ acceptedBy: 1, createdAt: -1 });
-
 
 module.exports = mongoose.model('Request', requestSchema);

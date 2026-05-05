@@ -5,6 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import { useRequests } from '../context/RequestContext';
 import { getStatsOverview } from '../services/api';
 import api from '../services/api';
+import FAQ from '../components/FAQ';
+import InfoTicker from '../components/InfoTicker'; // ← extracted InfoTicker component
 
 /* ─── Avatar helpers ──────────────────────── */
 const getInitials = (name = '') =>
@@ -25,59 +27,6 @@ const LiveDot = () => (
     <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
   </span>
 );
-
-// ── Info Ticker ───────────────────────────────────────────────────────────────
-const TICKER_ITEMS = [
-  { icon: '🚨', text: 'Always call 112 first for life-threatening emergencies — HelpLink is a powerful complement' },
-  { icon: '⚡', text: 'Responders are notified within 5 seconds of your SOS being sent' },
-  { icon: '📍', text: 'No account needed — anyone can send an SOS instantly from this page' },
-  { icon: '🤝', text: '4,800+ verified community responders including trained volunteers, off-duty medics & first-aiders' },
-  { icon: '🔒', text: 'Your location is never stored — it is shared only with your responder and purged when the emergency ends' },
-  { icon: '✅', text: '1,240+ SOS requests successfully resolved this month across the network' },
-  { icon: '⏱', text: 'Average community response time is under 3 minutes in urban areas' },
-  { icon: '📡', text: 'Offline? Your SOS is saved locally and auto-sent the moment you reconnect' },
-  { icon: '📸', text: 'Attaching a photo helps responders arrive fully prepared — faster aid, fewer questions' },
-  { icon: '🌐', text: 'HelpLink operates 24 / 7 — responders are active day and night across all zones' },
-];
-
-const InfoTicker = () => {
-  const doubled = [...TICKER_ITEMS, ...TICKER_ITEMS];
-  return (
-    <div
-      style={{
-        overflow: 'hidden',
-        width: '100%',
-        padding: '10px 0',
-        borderTop: '1.5px solid rgba(220,38,38,0.09)',
-        borderBottom: '1.5px solid rgba(220,38,38,0.09)',
-        background: 'linear-gradient(90deg,rgba(255,245,245,0.94) 0%,rgba(255,255,255,0.97) 50%,rgba(255,245,245,0.94) 100%)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-        position: 'relative',
-      }}
-    >
-      {/* Fade edges */}
-      <div style={{
-        position: 'absolute', top: 0, bottom: 0, left: 0, width: 64, zIndex: 2, pointerEvents: 'none',
-        background: 'linear-gradient(to right,rgba(255,245,245,0.96),transparent)',
-      }} />
-      <div style={{
-        position: 'absolute', top: 0, bottom: 0, right: 0, width: 64, zIndex: 2, pointerEvents: 'none',
-        background: 'linear-gradient(to left,rgba(255,245,245,0.96),transparent)',
-      }} />
-
-      <div className="ticker-track">
-        {doubled.map((item, i) => (
-          <span key={i} className="ticker-item">
-            <span className="ticker-icon">{item.icon}</span>
-            {item.text}
-            <span className="ticker-sep" />
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-};
 
 // ── SOS Button ───────────────────────────────────────────────────────────────
 const SOSButton = ({ onTrigger, loading, disabled, cooldown, fetchingLocation }) => {
@@ -125,7 +74,6 @@ const SOSButton = ({ onTrigger, loading, disabled, cooldown, fetchingLocation })
     return () => el.removeEventListener('touchstart', handleTouchStart);
   }, [startHold]);
 
-  // Ring geometry — slightly smaller, thinner stroke for a cleaner look
   const size         = 200;
   const cx           = size / 2;
   const radius       = 88;
@@ -135,7 +83,6 @@ const SOSButton = ({ onTrigger, loading, disabled, cooldown, fetchingLocation })
   const cooldownDash = ((100 - cooldownPct) / 100) * circumference;
   const holdSeconds  = Math.round((progress / 100) * holdDuration / 1000 * 10) / 10;
 
-  // Derive button background per state
   const btnBg = loading
     ? '#c41e1e'
     : cooldown > 0
@@ -148,7 +95,6 @@ const SOSButton = ({ onTrigger, loading, disabled, cooldown, fetchingLocation })
     <div className="flex flex-col items-center gap-4">
       <div className="relative select-none" style={{ width: size, height: size }}>
 
-        {/* Idle pulse rings — subtle, only 2 */}
         {!holding && !loading && cooldown === 0 && (
           <>
             <div className="absolute inset-0 rounded-full pointer-events-none sos-pulse-ring-1" />
@@ -156,17 +102,14 @@ const SOSButton = ({ onTrigger, loading, disabled, cooldown, fetchingLocation })
           </>
         )}
 
-        {/* Progress / cooldown ring */}
         <svg
           width={size} height={size}
           className="absolute inset-0 pointer-events-none"
           style={{ transform: 'rotate(-90deg)' }}
         >
-          {/* Track */}
           <circle cx={cx} cy={cx} r={radius} fill="none"
             stroke={cooldown > 0 ? 'rgba(245,158,11,0.12)' : 'rgba(220,38,38,0.08)'}
             strokeWidth="3" />
-          {/* Active arc */}
           {cooldown > 0 ? (
             <circle cx={cx} cy={cx} r={radius} fill="none"
               stroke="#f59e0b" strokeWidth="3" strokeLinecap="round"
@@ -180,7 +123,6 @@ const SOSButton = ({ onTrigger, loading, disabled, cooldown, fetchingLocation })
           )}
         </svg>
 
-        {/* Main button */}
         <button
           ref={buttonRef}
           onMouseDown={startHold}
@@ -257,7 +199,6 @@ const SOSButton = ({ onTrigger, loading, disabled, cooldown, fetchingLocation })
         </button>
       </div>
 
-      {/* Hint text */}
       <div style={{ height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {cooldown > 0 ? (
           <span style={{ fontSize: '0.75rem', color: '#b45309', fontWeight: 600 }}>Wait {cooldown}s</span>
@@ -268,7 +209,7 @@ const SOSButton = ({ onTrigger, loading, disabled, cooldown, fetchingLocation })
             {fetchingLocation ? 'Getting your location…' : 'Dispatching responders…'}
           </span>
         ) : (
-          <span style={{ fontSize: '0.75rem', color: '#c4bdb6', letterSpacing: '0.02em' }}>Hold 2 seconds to send</span>
+          <span style={{ fontSize: '0.75rem', color: '#c4bdb6', letterSpacing: '0.02em' }}>Press & hold 2s to send</span>
         )}
       </div>
     </div>
@@ -322,7 +263,6 @@ const ImageAttach = ({ sosImage, setSosImage }) => {
               <p className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-red-500 m-0 mb-2">Why attach a photo?</p>
               <ul className="m-0 p-0 flex flex-col gap-1.5" style={{ listStyle: 'none' }}>
                 {[
-                  { icon: '📍', text: 'Helps responders identify your exact location or surroundings faster.' },
                   { icon: '🩹', text: 'Shows the severity of injury so responders arrive prepared with the right aid.' },
                   { icon: '⚡', text: 'Reduces back-and-forth — responders act immediately without needing to ask questions.' },
                   { icon: '🚗', text: 'Captures scene details (accident, hazard) that words alone may miss.' },
@@ -333,7 +273,6 @@ const ImageAttach = ({ sosImage, setSosImage }) => {
                   </li>
                 ))}
               </ul>
-              <p className="m-0 mt-2.5 text-[0.65rem] text-stone-400 italic">Optional — but a photo can make the difference in critical moments.</p>
             </div>
           )}
         </div>
@@ -370,7 +309,6 @@ const StatsPill = ({ stats }) => {
     return () => cancelAnimationFrame(raf);
   }, [stats]);
 
-  // ── Loading skeleton — always render a pill shell with a spinner ──
   if (!stats) {
     return (
       <div
@@ -400,12 +338,7 @@ const StatsPill = ({ stats }) => {
   }
 
   const hasResponders = stats.totalActive > 0;
-
-  const nearbyLabel = stats.isLocationScoped
-    ? 'responders active nearby'
-    : 'responders active';
-
-  // Minimal fade — just opacity, no transforms or stagger
+  const nearbyLabel = stats.isLocationScoped ? 'responders active nearby' : 'responders active';
   const fadeIn = {
     opacity:    visible ? 1 : 0,
     transition: 'opacity 0.35s ease',
@@ -512,70 +445,7 @@ const StatsPill = ({ stats }) => {
   );
 };
 
-// ── FAQ ───────────────────────────────────────────────────────────────────────
-const FAQ_ITEMS = [
-  {
-    q: 'Who responds when I send an SOS?',
-    a: 'Verified HelpLink members within a 5 km radius are instantly notified. These are real people in your community — trained volunteers, off-duty medics, and registered first-aiders — who have opted in to receive emergency alerts near them.',
-  },
-  {
-    q: 'Is my location shared with anyone else?',
-    a: 'Your location is shared only with the responder who accepts your request, and only for the duration of the emergency. It is never stored on our servers, sold, or used for any other purpose. Once the request is resolved, the data is purged.',
-  },
-  {
-    q: 'Should I use this instead of calling 112?',
-    a: 'No — for life-threatening emergencies always call 112 first. HelpLink is designed to get you community help faster while official services are on their way. Think of it as a powerful complement, not a replacement.',
-  },
-];
-
-const FAQ = () => {
-  const [open, setOpen] = useState(0);
-  return (
-    <section className="max-w-xl mx-auto px-6 pt-16 pb-6 text-center">
-      <div className="flex items-center gap-4 mb-10">
-        <span className="uppercase text-[0.65rem] tracking-[0.2em] font-bold text-stone-400 flex-shrink-0">FAQ</span>
-        <div className="flex-1 h-px bg-black/[0.09]" />
-        <span className="uppercase text-[0.65rem] tracking-[0.2em] font-semibold text-stone-300 flex-shrink-0">Quick answers</span>
-      </div>
-      <div className="flex flex-col gap-3 text-left">
-        {FAQ_ITEMS.map((item, i) => {
-          const isOpen = open === i;
-          return (
-            <div key={i} className="rounded-2xl overflow-hidden transition-all duration-200"
-              style={{
-                border: isOpen ? '1.5px solid rgba(220,38,38,0.2)' : '1.5px solid rgba(0,0,0,0.08)',
-                background: isOpen ? 'linear-gradient(135deg,#fff5f5 0%,#fff 100%)' : 'rgba(255,255,255,0.85)',
-                boxShadow: isOpen ? '0 4px 20px rgba(220,38,38,0.06)' : '0 1px 4px rgba(0,0,0,0.03)',
-              }}>
-              <button onClick={() => setOpen(isOpen ? null : i)}
-                className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left bg-transparent border-0 cursor-pointer">
-                <span className="font-semibold text-[0.95rem] leading-snug" style={{ color: isOpen ? '#dc2626' : '#1a1714' }}>
-                  {item.q}
-                </span>
-                <span className="flex-shrink-0 flex items-center justify-center rounded-full transition-all duration-300"
-                  style={{
-                    width: 28, height: 28,
-                    background: isOpen ? 'rgba(220,38,38,0.1)' : 'rgba(0,0,0,0.05)',
-                    transform: isOpen ? 'rotate(45deg)' : 'rotate(0deg)',
-                  }}>
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                    <line x1="6" y1="1" x2="6" y2="11" stroke={isOpen ? '#dc2626' : '#78716c'} strokeWidth="1.8" strokeLinecap="round"/>
-                    <line x1="1" y1="6" x2="11" y2="6" stroke={isOpen ? '#dc2626' : '#78716c'} strokeWidth="1.8" strokeLinecap="round"/>
-                  </svg>
-                </span>
-              </button>
-              <div style={{ maxHeight: isOpen ? 200 : 0, overflow: 'hidden', transition: 'max-height 0.35s cubic-bezier(0.4,0,0.2,1)' }}>
-                <p className="text-sm leading-relaxed text-stone-500 px-6 pb-5 m-0">{item.a}</p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-};
-
-// ── Location Modal — defined OUTSIDE LandingPage to avoid re-creation on every render ──
+// ── Location Modal ────────────────────────────────────────────────────────────
 const LocationModal = ({ onClose }) => {
   const handleEnableClick = () => {
     if (!navigator.permissions) {
@@ -608,28 +478,20 @@ const LocationModal = ({ onClose }) => {
 
   return createPortal(
     <>
-      {/* Backdrop */}
       <div
         onClick={onClose}
         style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 99998,
+          position: 'fixed', inset: 0, zIndex: 99998,
           background: 'rgba(0,0,0,0.45)',
-          backdropFilter: 'blur(6px)',
-          WebkitBackdropFilter: 'blur(6px)',
+          backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
         }}
       />
-
-      {/* Modal — perfectly centered with fixed positioning */}
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="location-modal-title"
         style={{
-          position: 'fixed',
-          top: '50%',
-          left: '50%',
+          position: 'fixed', top: '50%', left: '50%',
           transform: 'translate(-50%, -50%)',
           zIndex: 99999,
           width: 'min(calc(100vw - 2rem), 360px)',
@@ -643,7 +505,6 @@ const LocationModal = ({ onClose }) => {
           animation: 'locationModalIn 0.3s cubic-bezier(0.22,1,0.36,1) both',
         }}
       >
-        {/* Icon + heading */}
         <div style={{ padding: '28px 28px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
           <div style={{
             width: 56, height: 56, borderRadius: '50%',
@@ -667,7 +528,6 @@ const LocationModal = ({ onClose }) => {
           </div>
         </div>
 
-        {/* Steps */}
         <div style={{ margin: '20px 28px 0', padding: '14px 16px', borderRadius: 14, background: '#fafaf9', border: '1px solid rgba(28,25,23,0.06)' }}>
           {[
             { step: '1', text: 'Open your browser or device Settings' },
@@ -686,7 +546,6 @@ const LocationModal = ({ onClose }) => {
           ))}
         </div>
 
-        {/* Buttons */}
         <div style={{ padding: '16px 28px 24px', display: 'flex', flexDirection: 'column', gap: 8 }}>
           <button
             onClick={handleEnableClick}
@@ -739,10 +598,9 @@ const LandingPage = () => {
 
   useEffect(() => () => clearInterval(cooldownTimerRef.current), []);
 
-  // ── Check if location is off on mount ──
   useEffect(() => {
     if (!navigator.geolocation) { setShowLocationModal(true); return; }
-    if (!navigator.permissions) { setShowLocationModal(true); return; }
+    if (!navigator.permissions)  { setShowLocationModal(true); return; }
 
     navigator.permissions.query({ name: 'geolocation' }).then((result) => {
       if (result.state === 'denied' || result.state === 'prompt') {
@@ -931,7 +789,6 @@ const LandingPage = () => {
     <div className="min-h-screen relative bg-white text-[#1a1714]"
       style={{ fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif" }}>
 
-      {/* Location modal — rendered outside the page tree via portal */}
       {showLocationModal && (
         <LocationModal onClose={() => setShowLocationModal(false)} />
       )}
@@ -952,7 +809,6 @@ const LandingPage = () => {
         @keyframes attachFadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
         @keyframes panelIn { from{opacity:0;transform:translateY(20px) scale(0.98)} to{opacity:1;transform:translateY(0) scale(1)} }
         @keyframes eyebrowIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes tickerScroll { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
         .fade-up    { animation: fadeUp 0.4s ease both; }
         .fade-up-2  { animation: fadeUp 0.4s 0.16s ease both; }
         .panel-in   { animation: panelIn 0.5s 0.05s cubic-bezier(0.22,1,0.36,1) both; }
@@ -964,43 +820,10 @@ const LandingPage = () => {
         .sos-attach-up  { animation:attachFadeUp 0.25s ease both; }
         .secondary-fade { opacity:0.45; transition:opacity 0.2s ease; }
         .secondary-fade:hover, .secondary-fade:focus-within { opacity:0.85; }
-        .ticker-track {
-          display: flex;
-          flex-direction: row;
-          flex-wrap: nowrap;
-          width: max-content;
-          animation: tickerScroll 60s linear infinite;
-          will-change: transform;
-        }
-        .ticker-track:hover { animation-play-state: paused; }
-        .ticker-item {
-          display: inline-flex;
-          align-items: center;
-          gap: 7px;
-          padding: 0 24px;
-          white-space: nowrap;
-          font-size: 0.76rem;
-          font-weight: 500;
-          color: #57534e;
-          letter-spacing: 0.01em;
-        }
-        .ticker-icon {
-          font-size: 0.82rem;
-          flex-shrink: 0;
-          line-height: 1;
-        }
-        .ticker-sep {
-          display: inline-block;
-          width: 3px;
-          height: 3px;
-          border-radius: 50%;
-          background: rgba(220,38,38,0.3);
-          flex-shrink: 0;
-          margin-left: 8px;
-        }
       `}</style>
 
-      <section className="relative flex flex-col items-center justify-center pt-10 pb-6" style={{ minHeight: 'min(100svh, 780px)' }}>
+      {/* ── SOS Hero Section ── */}
+      <section className="relative flex flex-col items-center justify-center pt-20 pb-6" style={{ minHeight: 'min(100svh, 780px)' }}>
         <div className="panel-in relative w-full flex flex-col items-center z-10 max-w-lg px-4">
 
           {/* Eyebrow */}
@@ -1101,6 +924,7 @@ const LandingPage = () => {
       {/* ── Info Ticker ── */}
       <InfoTicker />
 
+      {/* ── FAQ — now a standalone component ── */}
       <FAQ />
 
       <footer>

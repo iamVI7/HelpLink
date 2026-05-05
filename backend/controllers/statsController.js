@@ -9,8 +9,25 @@ exports.getStatsOverview = async (req, res) => {
 
     const activeThreshold = new Date(Date.now() - 10 * 1000);
 
+    // Exclude the current logged-in user if token provided
+    let excludeUserId = null;
+    try {
+      const authHeader = req.headers.authorization;
+      if (authHeader?.startsWith('Bearer ')) {
+        const jwt = require('jsonwebtoken');
+        const decoded = jwt.verify(authHeader.slice(7), process.env.JWT_SECRET);
+        excludeUserId = decoded.id || decoded._id;
+      }
+    } catch {
+      // Not logged in or invalid token — skip exclusion
+    }
+
     // Base filter — always active within time window
-    const baseFilter = { lastSeen: { $gte: activeThreshold }, role: { $ne: 'admin' } };
+    const baseFilter = {
+      lastSeen: { $gte: activeThreshold },
+      role: { $ne: 'admin' },
+      ...(excludeUserId ? { _id: { $ne: excludeUserId } } : {}),
+    };
 
     // If lat/lng provided, add a 5km geo filter using the 2dsphere index
     const locationFilter = hasLocation
