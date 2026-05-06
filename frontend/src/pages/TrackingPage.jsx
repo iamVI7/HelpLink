@@ -51,11 +51,8 @@ const css = `
   @keyframes fadeIn { from{opacity:0} to{opacity:1} }
   @keyframes ripple { 0%{transform:scale(0.88);opacity:0.6} 100%{transform:scale(2.4);opacity:0} }
   @keyframes checkPop { 0%{transform:scale(0);opacity:0} 60%{transform:scale(1.18);opacity:1} 100%{transform:scale(1);opacity:1} }
-  @keyframes borderPulse { 0%,100%{border-color:rgba(220,38,38,0.25)} 50%{border-color:rgba(220,38,38,0.65)} }
   @keyframes dotPulse { 0%,100%{opacity:1} 50%{opacity:0.22} }
   @keyframes gt_shimmer { 0%{background-position:-200% center} 100%{background-position:200% center} }
-  @keyframes gt_bgMove { 0%{transform:translate(0,0) rotate(0deg)} 100%{transform:translate(40px,40px) rotate(3deg)} }
-  @keyframes gt_bgMoveAlt { 0%{transform:translate(0,0) rotate(0deg)} 100%{transform:translate(-30px,-30px) rotate(-2deg)} }
   @keyframes gt_pulse { 0%,100%{opacity:1} 50%{opacity:0.22} }
   @keyframes spin { to{transform:rotate(360deg)} }
   .tp-card   { animation:fadeUp 0.5s ease both; }
@@ -133,7 +130,7 @@ const TrackingPage = () => {
   // ✅ FIX 10 — early return if request not loaded yet (prevents flicker)
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center"
-      style={{ background:'linear-gradient(145deg,#fff7f7 0%,#ffffff 40%,#f0fdf4 100%)',fontFamily:"'Outfit',sans-serif" }}>
+      style={{ background:'#f9f9f9', fontFamily:"'Outfit',sans-serif" }}>
       <style>{css}</style>
       <div className="text-center">
         <div style={{ width:44,height:44,borderRadius:'50%',border:'2.5px solid #fecaca',borderTopColor:'#dc2626',animation:'spin 0.9s linear infinite',margin:'0 auto 1rem' }} />
@@ -144,7 +141,7 @@ const TrackingPage = () => {
 
   if (error) return (
     <div className="min-h-screen flex items-center justify-center p-8"
-      style={{ background:'linear-gradient(145deg,#fff7f7 0%,#ffffff 40%,#f0fdf4 100%)',fontFamily:"'Outfit',sans-serif" }}>
+      style={{ background:'#f9f9f9', fontFamily:"'Outfit',sans-serif" }}>
       <style>{css}</style>
       <div className="text-center" style={{ maxWidth:340 }}>
         <div style={{ fontSize:'2.5rem',marginBottom:'1rem' }}>⚠️</div>
@@ -174,7 +171,9 @@ const TrackingPage = () => {
   const hasImage = images.length > 0 && images[0].url;
 
   // Guidance: prefer nav state (from LandingPage SOS), fall back to hardcoded map
-  const guidance = guidanceFromNav || GUIDANCE[category] || [];
+  // Limit to 3 tips max
+  const rawGuidance = guidanceFromNav || GUIDANCE[category] || [];
+  const guidance = rawGuidance.slice(0, 3);
 
   const userCoords = request.location?.coordinates
     ? { lat: request.location.coordinates[1], lng: request.location.coordinates[0] }
@@ -201,16 +200,8 @@ const TrackingPage = () => {
 
   return (
     <div className="min-h-screen w-full relative overflow-hidden"
-      style={{ background:'linear-gradient(145deg,#fff7f7 0%,#ffffff 40%,#f0fdf4 100%)',fontFamily:"'Outfit','Helvetica Neue',sans-serif",paddingTop:'5rem',paddingBottom:'3rem' }}>
+      style={{ background:'#f9f9f9', fontFamily:"'Outfit','Helvetica Neue',sans-serif", paddingTop:'5rem', paddingBottom:'3rem' }}>
       <style>{css}</style>
-
-      {/* Atmospheric background */}
-      <div aria-hidden="true" className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div style={{ position:'absolute',inset:0,backgroundImage:'radial-gradient(circle, rgba(0,0,0,0.06) 1px, transparent 1px)',backgroundSize:'28px 28px' }} />
-        <div style={{ position:'absolute',top:'-20%',left:'-12%',width:'60vw',height:'60vw',borderRadius:'50%',background:'radial-gradient(circle, rgba(254,202,202,0.5) 0%, transparent 65%)',animation:'gt_bgMove 14s ease-in-out infinite alternate' }} />
-        <div style={{ position:'absolute',bottom:'-15%',right:'-12%',width:'50vw',height:'50vw',borderRadius:'50%',background:'radial-gradient(circle, rgba(187,247,208,0.4) 0%, transparent 65%)',animation:'gt_bgMoveAlt 17s ease-in-out infinite alternate-reverse' }} />
-        <div style={{ position:'absolute',top:'-5%',right:'-8%',width:'35vw',height:'35vw',borderRadius:'50%',background:'radial-gradient(circle, rgba(254,240,138,0.22) 0%, transparent 65%)' }} />
-      </div>
 
       <div className="relative z-10 w-full max-w-sm sm:max-w-md mx-auto px-4 sm:px-6">
 
@@ -226,17 +217,9 @@ const TrackingPage = () => {
           </div>
         )}
 
-        {/* Brand strip */}
-        <div className="tp-card flex justify-center mb-5 sm:mb-6">
-          <div style={{ display:'inline-flex',alignItems:'center',gap:'0.6rem',padding:'6px 18px 6px 12px',background:'rgba(220,38,38,0.07)',border:'1px solid rgba(220,38,38,0.2)',borderRadius:'999px',animation:'borderPulse 2.5s ease-in-out infinite',backdropFilter:'blur(6px)' }}>
-            <div style={{ width:7,height:7,borderRadius:'50%',background:'#ef4444',animation:'gt_pulse 1.3s ease-in-out infinite',flexShrink:0,boxShadow:'0 0 6px rgba(239,68,68,0.5)' }} />
-            <span style={{ fontSize:'0.58rem',fontWeight:800,textTransform:'uppercase',letterSpacing:'0.2em',color:'#dc2626' }}>HelpLink · Request Tracking</span>
-          </div>
-        </div>
-
         {/* Main Card */}
         <div className="tp-card-1 gt-card-shadow rounded-3xl overflow-hidden mb-4"
-          style={{ background:'rgba(255,255,255,0.85)',border:'1px solid rgba(255,255,255,0.9)',backdropFilter:'blur(20px)' }}>
+          style={{ background:'rgba(255,255,255,0.95)',border:'1px solid rgba(0,0,0,0.06)',backdropFilter:'blur(20px)' }}>
 
           <div className="px-6 sm:px-9 pt-8 sm:pt-10 pb-6 sm:pb-8">
 
@@ -287,8 +270,7 @@ const TrackingPage = () => {
               </div>
             </div>
 
-            {/* ✅ NEW — Public ID badge: shown to authenticated users so they can
-                share / look up their request without exposing the Mongo _id */}
+            {/* ✅ NEW — Public ID badge */}
             {request.publicId && (
               <div
                 className="flex justify-center mb-4"
@@ -342,7 +324,7 @@ const TrackingPage = () => {
               </div>
             )}
 
-            {/* Guidance panel */}
+            {/* Guidance panel — max 3 tips */}
             {guidance.length > 0 && (
               <div className="mt-5 px-5 py-4 rounded-2xl"
                 style={{ background:'rgba(255,255,255,0.75)',border:'1px solid rgba(220,38,38,0.12)',backdropFilter:'blur(10px)',animation:'fadeUp 0.4s ease' }}>
@@ -420,32 +402,26 @@ const TrackingPage = () => {
             )}
           </div>
 
-          {/* Footer */}
+          {/* Footer — replaced with 112 pill */}
           <div className="gt-divider-line" />
-          <div className="px-6 sm:px-9 py-3.5 flex items-center justify-center gap-2" style={{ background:'rgba(255,255,255,0.5)' }}>
-            <div style={{ width:5,height:5,borderRadius:'50%',background:'#ef4444',flexShrink:0,boxShadow:'0 0 5px rgba(239,68,68,0.5)',animation:'gt_pulse 1.5s ease-in-out infinite' }} />
-            <p style={{ fontSize:'0.62rem',color:'#9ca3af',margin:0 }}>Life-threatening?{' '}<strong style={{ color:'#dc2626',fontWeight:700 }}>Call 112 immediately.</strong></p>
+          <div className="px-6 sm:px-9 py-3.5 flex items-center justify-center" style={{ background:'rgba(255,255,255,0.5)' }}>
+            <div style={{
+              display:'inline-flex',alignItems:'center',gap:'0.5rem',
+              padding:'6px 14px',borderRadius:999,
+              background:'#fef2f2',border:'1px solid rgba(220,38,38,0.18)',
+              fontSize:'0.68rem',color:'#b91c1c',fontWeight:500,
+            }}>
+              <span>⚠️</span>
+              <span>Life-threatening?</span>
+              <a href="tel:112" style={{ fontWeight:800,color:'#dc2626',textDecoration:'none' }}>Call 112 immediately.</a>
+            </div>
           </div>
         </div>
 
         {/* Navigation buttons */}
         <div className="tp-card-2 flex gap-3">
-          <button onClick={() => canShowMap ? navigate(`/map/${request._id}`) : null}
-            className="tp-sec-btn flex-1 py-3 rounded-2xl font-bold"
-            disabled={!canShowMap}
-            title={!canShowMap ? 'Available once helper is assigned with location' : ''}
-            style={{
-              background:'rgba(255,255,255,0.85)',backdropFilter:'blur(10px)',
-              color:canShowMap?'#374151':'#c7c3c0',
-              border:`1px solid ${canShowMap?'rgba(0,0,0,0.09)':'rgba(0,0,0,0.05)'}`,
-              fontSize:'0.68rem',textTransform:'uppercase',letterSpacing:'0.12em',
-              fontFamily:"'Outfit',sans-serif",cursor:canShowMap?'pointer':'not-allowed',
-              opacity:canShowMap?1:0.5,boxShadow:'0 2px 8px rgba(0,0,0,0.04)',
-            }}>
-            🗺️ Map View
-          </button>
-          <button onClick={() => navigate('/my-requests')} className="tp-sec-btn flex-1 py-3 rounded-2xl font-bold"
-            style={{ background:'rgba(255,255,255,0.85)',backdropFilter:'blur(10px)',color:'#374151',border:'1px solid rgba(0,0,0,0.09)',fontSize:'0.68rem',textTransform:'uppercase',letterSpacing:'0.12em',fontFamily:"'Outfit',sans-serif",boxShadow:'0 2px 8px rgba(0,0,0,0.04)' }}>
+          <button onClick={() => navigate('/dashboard')} className="tp-sec-btn flex-1 py-3 rounded-2xl font-bold"
+            style={{ background:'rgba(255,255,255,0.95)',backdropFilter:'blur(10px)',color:'#374151',border:'1px solid rgba(0,0,0,0.09)',fontSize:'0.68rem',textTransform:'uppercase',letterSpacing:'0.12em',fontFamily:"'Outfit',sans-serif",boxShadow:'0 2px 8px rgba(0,0,0,0.04)' }}>
             My Requests
           </button>
         </div>

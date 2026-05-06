@@ -1,11 +1,21 @@
 /**
- * AftercareButton.jsx
+ * REPLACEMENT for frontend/src/components/AftercareButton.jsx
  *
- * FIX: Passes userId as ?uid= query param in the redirect URL instead of
- * relying on localStorage timing across origins. localStorage.setItem in
- * HelpLink is not reliably read by UniCare before the page loads.
+ * WHAT CHANGED vs the existing file:
  *
- * Guest flow is completely unchanged.
+ *   1. For REGISTERED USERS, instead of redirecting to /aftercare/my?uid=...,
+ *      this now redirects to /onboarding/helplink on UniCare, passing the user's
+ *      email + name as URL params. UniCare then performs the conditional
+ *      onboarding (find-or-create account, auto-login).
+ *
+ *   2. For GUEST USERS, the flow is unchanged — redirects to
+ *      /aftercare/by-request/:requestId?guestId=...
+ *      (guests do not need a UniCare account for that page)
+ *
+ *   3. All existing styling, modal logic, and API call are preserved.
+ *
+ * NO OTHER FILES in HelpLink need to change.
+ * ──────────────────────────────────────────────────────────────────
  */
 
 import React, { useState } from 'react';
@@ -51,17 +61,33 @@ const AftercareButton = ({ requestId, isGuest = false, style = {} }) => {
       setModalOpen(false);
 
       if (data.isGuest) {
-        // ── Guest: redirect with guestId query param (unchanged) ──────────
+        // ── GUEST: unchanged redirect to guest aftercare page ─────────────
         const guestId = localStorage.getItem('guestId') || '';
         const qs      = guestId ? `?guestId=${encodeURIComponent(guestId)}` : '';
         window.location.href = `${UNICARE_BASE_URL}/aftercare/by-request/${data.requestId}${qs}`;
+
       } else {
-        // ── Logged-in user: pass userId in URL so UniCare can scope fetch ──
-        // Using URL param is reliable — no localStorage timing issues across
-        // different origins/ports.
-        const userId = user?._id || user?.id || '';
-        const qs     = userId ? `?uid=${encodeURIComponent(String(userId))}` : '';
-        window.location.href = `${UNICARE_BASE_URL}/aftercare/my${qs}`;
+        // ── REGISTERED: redirect to UniCare onboarding/helplink ───────────
+        // UniCare will find-or-create the account and auto-login the user.
+        const params = new URLSearchParams();
+
+        // Pass email so UniCare can find/create the account
+        const email = user?.email || '';
+        if (email) params.set('email', email);
+
+        // Pass name for account creation fallback
+        const name = user?.name || user?.fullName || '';
+        if (name) params.set('name', name);
+
+        // Pass requestId to link recovery data
+        if (data.requestId) params.set('requestId', String(data.requestId));
+
+        // Pass incident info for the transfer payload
+        // These are populated if available in the response
+        if (data.incidentType) params.set('incident', data.incidentType);
+        if (data.summary)      params.set('summary',  data.summary);
+
+        window.location.href = `${UNICARE_BASE_URL}/onboarding/helplink?${params.toString()}`;
       }
 
     } catch (err) {

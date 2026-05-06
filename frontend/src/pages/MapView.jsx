@@ -463,7 +463,8 @@ const MapView = () => {
   const fetchNearby = useCallback(async (lat, lng) => {
     try {
       const res   = await getNearbyUsers(lat, lng);
-      const users = res.data.data ?? [];
+      const allUsers = res.data.data ?? [];
+      const users = allUsers.filter(u => u.role !== 'admin');
       setNearbyUsers(users);
       setNearestUserId(users.length > 0 ? users[0]._id : null);
     } catch (err) {

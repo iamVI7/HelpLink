@@ -18,7 +18,7 @@ const avatarHue = (name = '') => {
 const LiveDot = ({ color = '#ef4444' }) => (
   <span className="relative inline-flex h-2 w-2 shrink-0">
     <span
-      className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60"
+      className="absolute inline-flex h-full w-full rounded-full opacity-40"
       style={{ backgroundColor: color }}
     />
     <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: color }} />
@@ -74,14 +74,14 @@ const SignOutModal = ({ onConfirm, onCancel }) => (
                  bg-white border border-stone-200 rounded-2xl shadow-2xl overflow-hidden"
       style={{ fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif" }}
     >
-      <div className="px-7 py-7">
+      <div className="px-7 py-9">
         <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-red-500 mb-3">
           Confirm Action
         </p>
         <p className="serif text-[1.45rem] leading-tight text-stone-900 mb-2">
           Sign out of HelpLink?
         </p>
-        <p className="text-sm text-stone-400 leading-relaxed mb-6">
+        <p className="text-sm text-stone-400 leading-relaxed mb-8">
           You'll be returned to the home page. Any unsaved changes will be lost.
         </p>
         <div className="flex items-center gap-3">
@@ -96,8 +96,7 @@ const SignOutModal = ({ onConfirm, onCancel }) => (
             onClick={onConfirm}
             className="flex-1 py-2.5 text-xs font-bold tracking-widest uppercase
                        bg-red-600 text-white rounded-full
-                       hover:bg-red-500 transition-all duration-150
-                       hover:-translate-y-px hover:shadow-md hover:shadow-red-600/25 active:translate-y-0"
+                       hover:bg-red-500 transition-colors duration-150"
           >
             Sign Out
           </button>
@@ -174,7 +173,7 @@ const Navbar = () => {
   const avatarFg     = `hsl(${hue} 60% 32%)`;
   const avatarBorder = `hsl(${hue} 45% 78%)`;
 
-  const isAdmin = user?.role === 'admin'; // ✅ local helper for readability
+  const isAdmin = user?.role === 'admin';
 
   const navLinks =
     isAdmin
@@ -191,26 +190,7 @@ const Navbar = () => {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap');
-        @keyframes dropIn {
-          from { opacity: 0; transform: translateY(-6px) scale(0.98); }
-          to   { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        @keyframes borderPulse {
-          0%, 100% { border-color: rgba(220,38,38,0.35); }
-          50%       { border-color: rgba(220,38,38,0.75); }
-        }
-        @keyframes shimmer {
-          0%   { background-position: -200% center; }
-          100% { background-position: 200% center; }
-        }
-        .drop-in      { animation: dropIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both; }
-        .border-pulse { animation: borderPulse 2s ease-in-out infinite; }
-        .serif        { font-family: 'DM Serif Display', Georgia, serif; }
-        .verify-btn-shimmer {
-          background: linear-gradient(105deg, #fef3c7 0%, #fde68a 30%, #fef9e7 50%, #fde68a 70%, #fef3c7 100%);
-          background-size: 200% auto;
-          animation: shimmer 2.8s linear infinite;
-        }
+        .serif { font-family: 'DM Serif Display', Georgia, serif; }
 
         /* ── Availability pill toggle ── */
         .avail-track {
@@ -231,7 +211,7 @@ const Navbar = () => {
           width: 1rem;
           height: 1rem;
           border-radius: 9999px;
-          transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease;
+          transition: transform 0.2s ease, background 0.2s ease;
           top: 50%;
           transform: translateY(-50%) translateX(2px);
           box-shadow: 0 1px 3px rgba(0,0,0,0.12);
@@ -246,7 +226,7 @@ const Navbar = () => {
           w-[calc(100%-2rem)] max-w-4xl
           bg-white/90 backdrop-blur-md border border-stone-200/80 rounded-2xl
           px-4 flex items-center justify-between gap-3
-          transition-all duration-200
+          transition-shadow duration-200
           ${scrolled ? 'shadow-lg shadow-stone-900/8 border-stone-300/60' : 'shadow-sm shadow-stone-900/4'}
         `}
         style={{ fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif", height: '3.25rem' }}
@@ -282,13 +262,13 @@ const Navbar = () => {
               </div>
             </div>
 
-            {/* ✅ Availability toggle — hidden for admin */}
+            {/* Availability toggle — hidden for admin */}
             {!isAdmin && (
               <button
                 onClick={handleAvailabilityToggle}
                 className={`
                   hidden sm:inline-flex items-center gap-1.5
-                  px-2.5 py-1 text-xs font-bold tracking-widest uppercase rounded-full border transition-all duration-150
+                  px-2.5 py-1 text-xs font-bold tracking-widest uppercase rounded-full border transition-colors duration-150
                   ${user.isAvailable
                     ? 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100 hover:border-green-300'
                     : 'border-stone-200 bg-stone-50 text-stone-500 hover:bg-stone-100'}
@@ -304,10 +284,9 @@ const Navbar = () => {
               <button
                 onClick={() => setVerifyModal(true)}
                 className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold tracking-widest uppercase
-                           rounded-full border border-amber-300 text-amber-800
-                           hover:border-amber-400 hover:shadow-sm hover:shadow-amber-200
-                           transition-all duration-200 hover:-translate-y-px active:translate-y-0
-                           verify-btn-shimmer"
+                           rounded-full border border-amber-300 bg-amber-50 text-amber-800
+                           hover:border-amber-400 hover:bg-amber-100
+                           transition-colors duration-150"
               >
                 <UnverifiedShieldIcon size={13} />
                 Verify
@@ -323,7 +302,7 @@ const Navbar = () => {
                     key={link.to}
                     to={link.to}
                     className={`
-                      px-3 py-1.5 text-xs font-semibold tracking-wide rounded-xl transition-all duration-150
+                      px-3 py-1.5 text-xs font-semibold tracking-wide rounded-xl transition-colors duration-150
                       ${isActive
                         ? 'text-red-600 bg-red-50'
                         : 'text-stone-500 hover:text-stone-900 hover:bg-stone-50'}
@@ -342,7 +321,7 @@ const Navbar = () => {
               <button
                 onClick={() => setDropdownOpen((o) => !o)}
                 aria-label="User menu"
-                className="flex items-center gap-2 hover:opacity-80 transition-opacity duration-150"
+                className="flex items-center gap-2 hover:opacity-75 transition-opacity duration-150"
               >
                 <div className="relative">
                   <div
@@ -379,7 +358,7 @@ const Navbar = () => {
 
               {/* ── Dropdown panel ── */}
               {dropdownOpen && (
-                <div className="drop-in absolute right-0 top-[calc(100%+12px)] w-64 bg-white border border-stone-200 rounded-2xl shadow-xl z-50 overflow-hidden">
+                <div className="absolute right-0 top-[calc(100%+12px)] w-64 bg-white border border-stone-200 rounded-2xl shadow-xl z-50 overflow-hidden">
 
                   {/* ── User header ── */}
                   {!isAdmin ? (
@@ -496,7 +475,7 @@ const Navbar = () => {
                     })}
                   </div>
 
-                  {/* ✅ Mobile availability toggle — hidden for admin */}
+                  {/* Mobile availability toggle — hidden for admin */}
                   {!isAdmin && (
                     <div className="sm:hidden border-b border-stone-100 px-4 py-3.5">
                       <button
@@ -521,7 +500,7 @@ const Navbar = () => {
                     <div className="border-b border-stone-100 px-3 py-3">
                       <button
                         onClick={() => { setDropdownOpen(false); setVerifyModal(true); }}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-widest text-amber-800 rounded-full border border-amber-300 verify-btn-shimmer hover:border-amber-400 hover:shadow-sm transition-all duration-200"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-widest text-amber-800 rounded-full border border-amber-300 bg-amber-50 hover:bg-amber-100 hover:border-amber-400 transition-colors duration-150"
                       >
                         <UnverifiedShieldIcon size={14} />
                         Verify Yourself
@@ -533,7 +512,7 @@ const Navbar = () => {
                   <div className="px-3 py-3">
                     <button
                       onClick={() => { setDropdownOpen(false); setSignOutModal(true); }}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-widest text-red-600 rounded-full border border-red-100 bg-red-50 hover:bg-red-100 hover:border-red-200 transition-all duration-150"
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-widest text-red-600 rounded-full border border-red-100 bg-red-50 hover:bg-red-100 hover:border-red-200 transition-colors duration-150"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -558,7 +537,7 @@ const Navbar = () => {
             </Link>
             <Link
               to="/register"
-              className="border-pulse px-4 py-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold tracking-widest uppercase rounded-full transition-all duration-150 hover:-translate-y-px hover:shadow-md hover:shadow-red-600/25 active:translate-y-0"
+              className="px-4 py-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold tracking-widest uppercase rounded-full transition-colors duration-150"
             >
               Get Started
             </Link>

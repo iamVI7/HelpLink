@@ -43,6 +43,15 @@ const ActivitySummary = () => {
 
   const loading = counts.requests === null && !error;
 
+  const pillBaseStyle = {
+    flex: 1,
+    minWidth: 160,
+    display: 'flex', alignItems: 'center', gap: 10,
+    padding: '10px 18px', borderRadius: 999,
+    cursor: 'default',
+    transition: 'background 0.15s ease',
+  };
+
   return (
     <div>
       {/* Section label — matches AdminDashboard SectionLabel */}
@@ -58,21 +67,18 @@ const ActivitySummary = () => {
         </h2>
       </div>
 
-      {/* Stat pills — matches AdminDashboard StatPill style */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
+      {/* Stat pills — stacked in two rows */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
 
         {/* Requests */}
         <div
           style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            padding: '10px 18px', borderRadius: 999,
+            ...pillBaseStyle,
             border: '1px solid rgba(220,38,38,0.18)',
             background: '#fef2f2',
-            transition: 'transform 0.15s, box-shadow 0.15s',
-            cursor: 'default',
           }}
-          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; }}
-          onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; }}
+          onMouseEnter={e => (e.currentTarget.style.background = '#fee2e2')}
+          onMouseLeave={e => (e.currentTarget.style.background = '#fef2f2')}
         >
           <span style={{ fontSize: '1.1rem', opacity: 0.7 }}>📋</span>
           <span
@@ -94,15 +100,12 @@ const ActivitySummary = () => {
         {/* Helps */}
         <div
           style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            padding: '10px 18px', borderRadius: 999,
+            ...pillBaseStyle,
             border: '1px solid rgba(22,163,74,0.18)',
             background: '#f0fdf4',
-            transition: 'transform 0.15s, box-shadow 0.15s',
-            cursor: 'default',
           }}
-          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; }}
-          onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; }}
+          onMouseEnter={e => (e.currentTarget.style.background = '#dcfce7')}
+          onMouseLeave={e => (e.currentTarget.style.background = '#f0fdf4')}
         >
           <span style={{ fontSize: '1.1rem', opacity: 0.7 }}>🤝</span>
           <span
@@ -122,7 +125,7 @@ const ActivitySummary = () => {
         </div>
       </div>
 
-      {/* CTA — View Full Activity, matches content-card button style */}
+      {/* CTA — View Full Activity */}
       <div className="content-card" style={{ borderRadius: 16, overflow: 'hidden' }}>
         <button
           onClick={() => navigate('/dashboard')}

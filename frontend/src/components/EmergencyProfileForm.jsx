@@ -132,7 +132,6 @@ const EmergencyProfileForm = ({ onSaved, compact = false }) => {
       };
       await updateEmergencyProfile(payload);
       toast.success('Emergency profile saved');
-      
       onSaved?.();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to save profile');
@@ -140,17 +139,6 @@ const EmergencyProfileForm = ({ onSaved, compact = false }) => {
       setSaving(false);
     }
   };
-
-  // ── Loading skeleton ──────────────────────────────────────────────────────
-  if (loading) {
-    return (
-      <div className="space-y-4 animate-pulse">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-10 bg-stone-100 rounded-xl" />
-        ))}
-      </div>
-    );
-  }
 
   // ── Form ──────────────────────────────────────────────────────────────────
   return (

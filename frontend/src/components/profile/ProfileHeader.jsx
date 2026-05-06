@@ -107,7 +107,12 @@ const ProfileHeader = ({ user }) => {
               <span style={{ fontSize: '0.75rem', color: '#a8a29e' }}>📞 {user.phoneNumber}</span>
             )}
             {user.address && (
-              <span style={{ fontSize: '0.75rem', color: '#a8a29e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span style={{
+                fontSize: '0.75rem',
+                color: '#a8a29e',
+                wordBreak: 'break-word',
+                whiteSpace: 'normal',
+              }}>
                 📍 {user.address}
               </span>
             )}
