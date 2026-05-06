@@ -1,14 +1,21 @@
 /**
- * AftercareButton.jsx  — UPDATED
+ * REPLACEMENT for frontend/src/components/AftercareButton.jsx
  *
- * CHANGES vs previous version:
- *   1. AftercareConsentModal's onSubmit now receives (consent, userNote, shareEmail).
- *      shareEmail=true  → user's registered email is passed to UniCare → full account created.
- *      shareEmail=false → email sent as null → UniCare creates temp guest account.
- *   2. For REGISTERED users, the redirect now goes to /onboarding/helplink on UniCare
- *      WITH or WITHOUT email based on shareEmail consent.
- *   3. Guest flow is completely unchanged.
- *   4. All existing styling, modal logic preserved.
+ * WHAT CHANGED vs the existing file:
+ *
+ *   1. For REGISTERED USERS, instead of redirecting to /aftercare/my?uid=...,
+ *      this now redirects to /onboarding/helplink on UniCare, passing the user's
+ *      email + name as URL params. UniCare then performs the conditional
+ *      onboarding (find-or-create account, auto-login).
+ *
+ *   2. For GUEST USERS, the flow is unchanged — redirects to
+ *      /aftercare/by-request/:requestId?guestId=...
+ *      (guests do not need a UniCare account for that page)
+ *
+ *   3. All existing styling, modal logic, and API call are preserved.
+ *
+ * NO OTHER FILES in HelpLink need to change.
+ * ──────────────────────────────────────────────────────────────────
  */
 
 import React, { useState } from 'react';
@@ -31,65 +38,52 @@ const AftercareButton = ({ requestId, isGuest = false, style = {} }) => {
     setModalOpen(true);
   };
 
-  const buildPayload = (consent, userNote, shareEmail) => ({
+  const buildPayload = (consent, userNote) => ({
     consent: {
-      incident:   true,
-      location:   consent.location,
-      contact:    consent.contact,
-      anonymous:  consent.anonymous,
+      incident:  true,
+      location:  consent.location,
+      contact:   consent.contact,
+      anonymous: consent.anonymous,
     },
     ...(userNote && { userNote }),
-    anonymous:  consent.anonymous,
-    // Tell HelpLink backend whether to include the registered email in the
-    // payload forwarded to UniCare. Backend checks this flag.
-    shareEmail: shareEmail,
+    anonymous: consent.anonymous,
   });
 
-  /**
-   * onSubmit now receives a third arg: shareEmail (boolean)
-   *   true  → include real email → UniCare creates/matches real account
-   *   false → send email=null → UniCare creates temp guest account
-   */
-  const handleConsentSubmit = async (consent, userNote, shareEmail) => {
+  const handleConsentSubmit = async (consent, userNote) => {
     setLoading(true);
     setError(null);
 
     try {
-      const payload = buildPayload(consent, userNote, shareEmail);
+      const payload = buildPayload(consent, userNote);
       const res     = await sendToAftercare(requestId, payload);
       const data    = res.data;
 
       setModalOpen(false);
 
-      if (data.isGuest || !shareEmail) {
-        // ── GUEST or registered-but-opted-out-of-email → guest UniCare flow ──
-        // For registered users who unchecked email, we redirect to the onboarding
-        // page WITHOUT an email param. UniCare will create a temp guest account.
-        if (isGuest) {
-          // Pure guest: go to the read-only guest aftercare page
-          const guestId = localStorage.getItem('guestId') || '';
-          const qs      = guestId ? `?guestId=${encodeURIComponent(guestId)}` : '';
-          window.location.href = `${UNICARE_BASE_URL}/aftercare/by-request/${data.requestId}${qs}`;
-        } else {
-          // Registered user who declined to share email → create guest account on UniCare
-          const params = new URLSearchParams();
-          const name   = user?.name || user?.fullName || '';
-          if (name)           params.set('name',      name);
-          if (data.requestId) params.set('requestId', String(data.requestId));
-          if (data.incidentType) params.set('incident', data.incidentType);
-          if (data.summary)      params.set('summary',  data.summary);
-          // No email → UniCare will create a guest account and show credentials
-          window.location.href = `${UNICARE_BASE_URL}/onboarding/helplink?${params.toString()}`;
-        }
+      if (data.isGuest) {
+        // ── GUEST: unchanged redirect to guest aftercare page ─────────────
+        const guestId = localStorage.getItem('guestId') || '';
+        const qs      = guestId ? `?guestId=${encodeURIComponent(guestId)}` : '';
+        window.location.href = `${UNICARE_BASE_URL}/aftercare/by-request/${data.requestId}${qs}`;
 
       } else {
-        // ── REGISTERED + email consent given → full account flow ──────────
+        // ── REGISTERED: redirect to UniCare onboarding/helplink ───────────
+        // UniCare will find-or-create the account and auto-login the user.
         const params = new URLSearchParams();
-        const email  = user?.email || '';
-        if (email)          params.set('email',     email);
-        const name   = user?.name || user?.fullName || '';
-        if (name)           params.set('name',      name);
+
+        // Pass email so UniCare can find/create the account
+        const email = user?.email || '';
+        if (email) params.set('email', email);
+
+        // Pass name for account creation fallback
+        const name = user?.name || user?.fullName || '';
+        if (name) params.set('name', name);
+
+        // Pass requestId to link recovery data
         if (data.requestId) params.set('requestId', String(data.requestId));
+
+        // Pass incident info for the transfer payload
+        // These are populated if available in the response
         if (data.incidentType) params.set('incident', data.incidentType);
         if (data.summary)      params.set('summary',  data.summary);
 
@@ -105,7 +99,7 @@ const AftercareButton = ({ requestId, isGuest = false, style = {} }) => {
 
   return (
     <>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+      <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'0.5rem' }}>
         <button
           onClick={handleButtonClick}
           disabled={!requestId}
@@ -140,7 +134,7 @@ const AftercareButton = ({ requestId, isGuest = false, style = {} }) => {
         </button>
 
         {error && (
-          <p style={{ fontSize: '0.65rem', color: '#dc2626', margin: 0, fontWeight: 500, textAlign: 'center', maxWidth: 260 }}>
+          <p style={{ fontSize:'0.65rem', color:'#dc2626', margin:0, fontWeight:500, textAlign:'center', maxWidth:260 }}>
             ⚠️ {error}
           </p>
         )}
