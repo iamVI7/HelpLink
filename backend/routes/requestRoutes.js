@@ -26,12 +26,9 @@ const {
   createGuestSOS,
   updateRequest,
   addGuestImage,
-  // ✅ Aftercare Bridge
   sendToAftercare,
   sendMedicalProfile,
-  // ✅ Public ID tracking
   trackByPublicId,
-  // ✅ NEW — Cancel Request
   cancelRequest,
 } = require('../controllers/requestController');
 
@@ -53,31 +50,16 @@ const updateRequestValidation = [
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SECTION 1 — FULLY PUBLIC (no auth at all)
-// These must come first so they are never touched by protect middleware.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// SOS — guests and logged-in users
 router.post('/sos', optionalAuth, attachEmergencyProfile, upload.array('images', 1), createGuestSOS);
-
-// Guest image upload — no auth, validated by isGuest flag in controller
 router.put('/:id/guest-image', upload.single('images'), addGuestImage);
-
-// ✅ Track by public ID (e.g. HL-REQ-000123)
 router.get('/track/:publicId', optionalAuth, trackByPublicId);
-
-// ✅ Aftercare: allow BOTH guests and logged-in users
 router.post('/:id/aftercare', optionalAuth, sendToAftercare);
-
-// ✅ NEW — Cancel Request
-// Registered in the PUBLIC section (before protect wall) so guests can call it
-// without a JWT token. Ownership is verified inside the controller via guestId.
-// optionalAuth populates req.user if a valid token is present so logged-in
-// users also get the correct ownership check inside the controller.
 router.patch('/:id/cancel', optionalAuth, cancelRequest);
 
-// GET single request — public with optionalAuth (guests need this for tracking)
+// GET single request — public with optionalAuth
 router.get('/:id', optionalAuth, async (req, res, next) => {
-  // Skip this handler for named sub-paths — let them fall through to protected routes
   const named = ['nearby', 'my-requests', 'my-accepted', 'admin', 'track'];
   if (named.some(n => req.params.id === n || req.params.id.startsWith(n))) {
     return next();
@@ -109,7 +91,6 @@ router.get('/:id', optionalAuth, async (req, res, next) => {
       req.user &&
       request.createdBy.toString() === req.user._id.toString();
 
-    // Guest owner: guestId query param must match stored guestId exactly
     const guestIdParam = req.query.guestId;
     const isGuestOwner =
       (request.isGuest || request.requesterType === 'guest') &&
@@ -124,23 +105,27 @@ router.get('/:id', optionalAuth, async (req, res, next) => {
     }
 
     return res.json({
-      _id:                request._id,
-      publicId:           request.publicId,
-      status:             request.status,
-      location:           request.location,
-      requesterType:      request.requesterType,
-      isSOS:              request.isSOS,
-      isGuest:            request.isGuest,
-      category:           request.category,
-      title:              request.title,
-      description:        request.description,
-      urgency:            request.urgency,
-      isEnhanced:         request.isEnhanced,
-      media:              request.media,
-      // ✅ NEW — include cancellation data so frontend can react correctly
+      _id:           request._id,
+      publicId:      request.publicId,
+      status:        request.status,
+      location:      request.location,
+      requesterType: request.requesterType,
+      isSOS:         request.isSOS,
+      isGuest:       request.isGuest,
+      category:      request.category,
+      title:         request.title,
+      description:   request.description,
+      urgency:       request.urgency,
+      isEnhanced:    request.isEnhanced,
+      media:         request.media,
+      // Cancellation
       cancelledBy:        request.cancelledBy,
       cancellationReason: request.cancellationReason,
       cancelledAt:        request.cancelledAt,
+      // ✅ NEW — Activity feed: returned so the 8-second poll seeds the UI
+      // when the page is refreshed after helpers were already notified
+      notifiedCount:         request.notifiedCount         ?? 0,
+      nearestHelperDistance: request.nearestHelperDistance ?? null,
       helper: request.acceptedBy
         ? {
             name:     request.acceptedBy.name,
@@ -161,7 +146,6 @@ router.get('/:id', optionalAuth, async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────────────────────
 router.use(protect);
 
-// POST / — create normal request (users only)
 router.post(
   '/',
   authorizeRoles('user'),
@@ -172,24 +156,19 @@ router.post(
   createRequest
 );
 
-// Named GET routes — must be after protect
 router.get('/nearby',      getNearbyRequests);
 router.get('/my-requests', getMyRequests);
 router.get('/my-accepted', getMyAcceptedRequests);
 
-// Admin routes
 router.get('/admin/all',          isAdmin, getAllRequests);
 router.patch('/admin/:id/delete', isAdmin, deleteRequestAdmin);
 
-// Action routes
 router.patch('/:id/accept',   acceptRequest);
 router.patch('/:id/complete', completeRequest);
 router.post('/:id/rate',      rateHelper);
 
-// ✅ Medical profile transfer: logged-in users only
 router.post('/aftercare/profile', sendMedicalProfile);
 
-// PUT /:id — update/enhance request
 router.put('/:id', upload.array('images', 3), updateRequestValidation, validateRequest, updateRequest);
 
 module.exports = router;

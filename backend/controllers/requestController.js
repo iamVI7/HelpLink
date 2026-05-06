@@ -154,7 +154,9 @@ const trackByPublicId = async (req, res) => {
 // @access  Public (guests + logged-in users)
 const sendToAftercare = async (req, res) => {
   try {
-    send(res, await requestService.sendToAftercare(req));
+    // send(res, await requestService.sendToAftercare(req));
+    const result = await requestService.sendToAftercare(req);
+    return res.status(result.status).json(result.body);
   } catch (error) {
     if (error.response) {
       console.error('sendToAftercare: UniCare returned', error.response.status, error.response.data);

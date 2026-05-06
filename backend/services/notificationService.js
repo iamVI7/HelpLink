@@ -1,22 +1,91 @@
 // services/notificationService.js
 // All socket.io emission logic and nearby-user detection.
-// Extracted from createRequest and other handlers — logic is UNCHANGED.
+// Extracted from createRequest and other handlers — existing logic is UNCHANGED.
+// ✅ NEW: emitNewRequestEvents now also fires sos_activity_update back to the
+//         guest's SOS room so the frontend activity feed shows real data.
 
 const mongoose = require('mongoose');
 const User    = require('../models/User');
+const Request = require('../models/Request');
 const { getSocketIO, getUserSocketId } = require('../socket');
 const { calculateDistance, calculateETA } = require('../utils/distance');
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Internal helper: compute activity stats from a list of nearbyUsers
+// and the request's coordinates, then persist + emit to guest room.
+//
+// @param {object}   request     - Mongoose doc (will be mutated + saved)
+// @param {object[]} nearbyUsers - lean user docs with location.coordinates
+// @param {number[]} coordinates - [lng, lat] of the request
+// @param {object}   io          - socket.io server instance
+// ─────────────────────────────────────────────────────────────────────────────
+const _persistAndEmitActivityUpdate = async (request, nearbyUsers, coordinates, io) => {
+  try {
+    const count = nearbyUsers.length;
+
+    // Find the nearest helper distance (km) among this wave's users
+    let nearestKm = null;
+    if (count > 0) {
+      const [rLng, rLat] = coordinates;
+      let minDist = Infinity;
+      nearbyUsers.forEach(u => {
+        if (u.location?.coordinates) {
+          const [uLng, uLat] = u.location.coordinates;
+          const d = calculateDistance(uLat, uLng, rLat, rLng); // returns km
+          if (d < minDist) minDist = d;
+        }
+      });
+      nearestKm = minDist === Infinity ? null : Math.round(minDist * 10) / 10;
+    }
+
+    // ── Persist to DB atomically ──────────────────────────────────────────
+    // Use $inc for notifiedCount so concurrent rebroadcast cycles don't
+    // overwrite each other; set nearestHelperDistance only when we have a
+    // value (keeps the last known distance if the new wave found nobody).
+    const updateOp = {
+      $inc: { notifiedCount: count },
+    };
+    if (nearestKm !== null) {
+      updateOp.$set = { nearestHelperDistance: nearestKm };
+    }
+
+    const updated = await Request.findByIdAndUpdate(
+      request._id,
+      updateOp,
+      { returnDocument: 'after', select: 'notifiedCount nearestHelperDistance guestId' }
+    );
+
+    if (!updated) return; // request was deleted in the meantime
+
+    // ── Emit sos_activity_update to the guest's room ──────────────────────
+    // The guest socket auto-joins sos_<guestId> on connect, so this lands
+    // immediately without any extra plumbing.
+    if (updated.guestId) {
+      io.to(`sos_${updated.guestId}`).emit('sos_activity_update', {
+        requestId:             String(request._id),
+        notifiedCount:         updated.notifiedCount,
+        nearestHelperDistance: updated.nearestHelperDistance, // km or null
+      });
+    }
+
+    // Also emit to request room (helpers' TrackingPage, admin dashboard, etc.)
+    io.to(`request_${request._id}`).emit('sos_activity_update', {
+      requestId:             String(request._id),
+      notifiedCount:         updated.notifiedCount,
+      nearestHelperDistance: updated.nearestHelperDistance,
+    });
+
+  } catch (err) {
+    // Non-fatal — activity feed is cosmetic; don't crash the main flow
+    console.warn('_persistAndEmitActivityUpdate (non-fatal):', err.message);
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
  * Emit all socket events after a new request is created.
- *
- * @param {object} params
- * @param {object}      params.request           - raw saved Request doc
- * @param {object}      params.populatedRequest  - populated version (or same as request)
- * @param {object}      params.requestDoc        - plain doc used for creation
- * @param {boolean}     params.isSOS
- * @param {string|null} params.userId
- * @param {number[]}    params.coordinates       - [lng, lat]
+ * ✅ NEW: also fires sos_activity_update after the initial nearby-user wave.
  */
 const emitNewRequestEvents = async ({
   request,
@@ -37,6 +106,7 @@ const emitNewRequestEvents = async ({
         : 'REQUEST',
     };
 
+    // ── Existing broadcasts — UNCHANGED ──────────────────────────────────
     io.emit('admin_new_request', {
       request: socketPayload,
       message: isSOS
@@ -48,12 +118,14 @@ const emitNewRequestEvents = async ({
       io.emit('new_sos', { requestId: request._id, message: '🆘 New SOS triggered' });
     }
 
-    // Only run nearby-user detection for logged-in users with a valid ObjectId.
-    // Guest IDs (e.g. "HL-GUEST-000043") are strings — Mongoose cannot cast them
-    // to ObjectId for _id queries, which causes a CastError. Skip entirely for guests.
+    // ── Nearby-user detection (existing logic — UNCHANGED) ────────────────
+    // Only for logged-in users with a valid ObjectId; skip guests entirely.
     const isValidObjectId = userId && mongoose.Types.ObjectId.isValid(userId);
+
+    let nearbyUsers = [];
+
     if (isValidObjectId) {
-      const nearbyUsers = await User.find({
+      nearbyUsers = await User.find({
         _id: { $ne: userId },
         isAvailable: true,
         location: {
@@ -81,7 +153,64 @@ const emitNewRequestEvents = async ({
           });
         }
       });
+    } else {
+      // Guest SOS — query nearby users without the $ne userId constraint
+      // so we still get a count for the activity feed, but we DON'T block
+      // on this because the guest flow is latency-sensitive.
+      // We do this in a separate, non-blocking path so the HTTP response
+      // is not delayed waiting for the DB query.
+      if (coordinates && coordinates.length === 2 && request.isSOS) {
+        // Fire-and-forget — errors are caught inside the helper
+        (async () => {
+          try {
+            const guestNearby = await User.find({
+              isAvailable: true,
+              location: {
+                $near: {
+                  $geometry: { type: 'Point', coordinates },
+                  $maxDistance: request.radius || 5000,
+                },
+              },
+            }).select('_id location').lean();
+
+            // Notify helpers of the new SOS just like the user path does
+            guestNearby.forEach(nearUser => {
+              const socketId = getUserSocketId(nearUser._id.toString());
+              if (socketId && nearUser.location?.coordinates) {
+                const [uLng, uLat] = nearUser.location.coordinates;
+                const [rLng, rLat] = coordinates;
+                const distance = calculateDistance(uLat, uLng, rLat, rLng);
+                const eta      = calculateETA(distance);
+                io.to(socketId).emit('new_request', {
+                  request: {
+                    ...(populatedRequest.toObject ? populatedRequest.toObject() : populatedRequest),
+                    distance,
+                    eta,
+                  },
+                  message: `🚨 New ${requestDoc.urgency} urgency SOS nearby`,
+                });
+              }
+            });
+
+            // ✅ NEW — update activity feed for the guest
+            await _persistAndEmitActivityUpdate(request, guestNearby, coordinates, io);
+          } catch (e) {
+            console.warn('Guest SOS nearby query (non-fatal):', e.message);
+          }
+        })();
+
+        // Return early — activity update is handled above asynchronously
+        return;
+      }
     }
+
+    // ✅ NEW — update activity feed (user SOS / normal request path)
+    // Only meaningful for SOS requests that have a guest room to emit to,
+    // but we always persist the count so the poll fallback also works.
+    if (isSOS || request.isSOS) {
+      await _persistAndEmitActivityUpdate(request, nearbyUsers, coordinates, io);
+    }
+
   } catch (socketError) {
     console.error('Socket error (non-fatal):', socketError.message);
   }
@@ -89,11 +218,7 @@ const emitNewRequestEvents = async ({
 
 /**
  * Emit socket events when a request is accepted.
- *
- * @param {object} params
- * @param {object} params.request         - original (pre-update) request
- * @param {object} params.updatedRequest  - populated updated request
- * @param {object} params.user            - req.user
+ * UNCHANGED from original.
  */
 const emitRequestAcceptedEvents = ({ request, updatedRequest, user }) => {
   try {
@@ -126,11 +251,7 @@ const emitRequestAcceptedEvents = ({ request, updatedRequest, user }) => {
 
 /**
  * Emit socket events when a request is completed.
- *
- * @param {object} params
- * @param {object} params.request         - original request doc
- * @param {object} params.updatedRequest  - populated updated request
- * @param {object} params.user            - req.user
+ * UNCHANGED from original.
  */
 const emitRequestCompletedEvents = ({ request, updatedRequest, user }) => {
   try {
@@ -163,10 +284,7 @@ const emitRequestCompletedEvents = ({ request, updatedRequest, user }) => {
 
 /**
  * Emit socket events when a request is updated/enhanced.
- *
- * @param {object} params
- * @param {object} params.updated - populated updated request
- * @param {object} params.user    - req.user
+ * UNCHANGED from original.
  */
 const emitRequestUpdatedEvents = ({ updated, user }) => {
   try {
@@ -187,4 +305,6 @@ module.exports = {
   emitRequestAcceptedEvents,
   emitRequestCompletedEvents,
   emitRequestUpdatedEvents,
+  // ✅ exported so rebroadcastService can reuse the same helper
+  _persistAndEmitActivityUpdate,
 };

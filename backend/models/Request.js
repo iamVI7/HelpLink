@@ -3,7 +3,6 @@ const mongoose = require('mongoose');
 const requestSchema = new mongoose.Schema({
   title: {
     type: String,
-    // ✅ NOT required for guest SOS — title auto-generated in controller
     trim: true,
     maxlength: [100, 'Title cannot exceed 100 characters']
   },
@@ -14,7 +13,6 @@ const requestSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    // ❌ REMOVED 'tools'
     enum: ['blood', 'medical', 'emergency', 'other', 'critical', 'accident'],
     default: 'other'
   },
@@ -57,7 +55,6 @@ const requestSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    // ✅ ADDED 'cancelled' to enum
     enum: ['open', 'accepted', 'completed', 'cancelled'],
     default: 'open'
   },
@@ -88,7 +85,7 @@ const requestSchema = new mongoose.Schema({
     default: () => new Date(+new Date() + 24 * 60 * 60 * 1000)
   },
 
-  // ── Guest SOS fields ─────────────────────────────────────────────────────
+  // ── Guest SOS fields ──────────────────────────────────────────────────────
   requesterType: {
     type: String,
     enum: ['user', 'guest'],
@@ -131,7 +128,7 @@ const requestSchema = new mongoose.Schema({
     }
   },
 
-  // ✅ ADDED — unified request pipeline fields
+  // ── Unified request pipeline fields ──────────────────────────────────────
   isGuest: {
     type: Boolean,
     default: false
@@ -146,7 +143,7 @@ const requestSchema = new mongoose.Schema({
     default: 'available'
   },
 
-  // ── NEW: Emergency Profile Snapshot ──────────────────────────────────────
+  // ── Emergency Profile Snapshot ────────────────────────────────────────────
   emergencyProfileSnapshot: {
     name:           { type: String,  default: null },
     phoneNumber:    { type: String,  default: null },
@@ -154,20 +151,13 @@ const requestSchema = new mongoose.Schema({
     totalHelpGiven: { type: Number,  default: null },
     isVerified:     { type: Boolean, default: null },
     address:        { type: String,  default: null },
-
     bloodGroup:          { type: String,  default: null },
     allergies:           { type: [String], default: undefined },
     medicalConditions:   { type: [String], default: undefined },
     medications:         { type: [String], default: undefined },
     disabilityInfo:      { type: String,  default: null },
-    emergencyContacts:   {
-      type: [
-        {
-          name:         String,
-          relationship: String,
-          phone:        String,
-        }
-      ],
+    emergencyContacts: {
+      type: [{ name: String, relationship: String, phone: String }],
       default: undefined,
     },
     specialInstructions: { type: String, default: null },
@@ -187,11 +177,7 @@ const requestSchema = new mongoose.Schema({
     default: null,
   },
 
-  // ── ✅ NEW: Cancellation fields ────────────────────────────────────────────
-  // cancelledBy   — who initiated the cancellation
-  // cancellationReason — reason code selected by the user
-  // cancelledAt   — timestamp of cancellation
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── Cancellation fields ───────────────────────────────────────────────────
   cancelledBy: {
     type: String,
     enum: ['guest', 'user', 'admin'],
@@ -206,7 +192,29 @@ const requestSchema = new mongoose.Schema({
     type: Date,
     default: null,
   },
-  // ── END: Cancellation fields ──────────────────────────────────────────────
+
+  // ── ✅ NEW: Real-time activity feed fields ────────────────────────────────
+  //
+  // notifiedCount        — running total of unique users alerted across ALL
+  //                        broadcast + rebroadcast waves for this request.
+  //                        Incremented atomically by notificationService and
+  //                        rebroadcastService after each wave.
+  //
+  // nearestHelperDistance — distance in km of the closest available helper
+  //                        found during the most recent broadcast wave.
+  //                        null = no helpers found yet in range.
+  //                        Updated each wave so the frontend always shows
+  //                        the freshest proximity figure.
+  // ─────────────────────────────────────────────────────────────────────────
+  notifiedCount: {
+    type: Number,
+    default: 0,
+  },
+  nearestHelperDistance: {
+    type: Number,   // km, e.g. 1.2
+    default: null,
+  },
+  // ── END: Activity feed fields ─────────────────────────────────────────────
 
 }, {
   timestamps: true

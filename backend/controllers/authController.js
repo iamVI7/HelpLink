@@ -195,7 +195,7 @@ const updateAvailability = async (req, res) => {
     const user = await User.findByIdAndUpdate(
       req.user._id,
       { isAvailable },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     ).select('-password');
 
     res.json({
@@ -423,7 +423,7 @@ const verifyOTP = async (req, res) => {
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
       { isVerified: true },
-      { new: true }
+      { returnDocument: 'after' }
     ).select('-password');
 
     res.json({

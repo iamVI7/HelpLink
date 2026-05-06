@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import api from '../services/api';
 // ✅ Aftercare Bridge
 import AftercareButton from '../components/AftercareButton';
-// ✅ NEW — Cancel Request Modal
+// ✅ Cancel Request Modal
 import CancelRequestModal from '../components/CancelRequestModal';
 
 // Image source of truth helper
@@ -29,30 +29,24 @@ const PublicIdLookup = () => {
   const handleLookup = async (e) => {
     e.preventDefault();
     const trimmed = input.trim().toUpperCase();
-
     if (!trimmed.startsWith('HL-REQ-')) {
       setError('Please enter a valid ID starting with HL-REQ-');
       return;
     }
-
     setLoading(true);
     setError(null);
-
     try {
       const guestId = localStorage.getItem('guestId') || '';
       const res = await api.get(`/requests/track/${trimmed}`, {
         params: guestId ? { guestId } : {},
       });
-
       if (!res.data || !res.data._id) {
         setError('No request found with that ID.');
         return;
       }
-
       navigate(`/tracking/${res.data._id}`);
     } catch (err) {
-      const msg = err.response?.data?.message || 'No request found with that ID.';
-      setError(msg);
+      setError(err.response?.data?.message || 'No request found with that ID.');
     } finally {
       setLoading(false);
     }
@@ -95,33 +89,20 @@ const PublicIdLookup = () => {
       <div className="lookup-card" style={{ width: '100%', maxWidth: 440 }}>
         <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
           <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🔍</div>
-          <h1 style={{
-            fontFamily: "'Playfair Display', Georgia, serif",
-            fontSize: 'clamp(1.4rem, 4vw, 1.75rem)', color: '#111827',
-            marginBottom: '0.5rem', letterSpacing: '-0.02em',
-          }}>
+          <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(1.4rem, 4vw, 1.75rem)', color: '#111827', marginBottom: '0.5rem', letterSpacing: '-0.02em' }}>
             Track your <span style={{ color: '#dc2626', fontStyle: 'italic' }}>request.</span>
           </h1>
           <p style={{ fontSize: '0.85rem', color: '#6b7280', lineHeight: 1.6, margin: 0 }}>
             Enter your HelpLink request ID to check its status.
           </p>
         </div>
-
-        <div style={{
-          background: '#fff', borderRadius: '1.25rem', padding: '1.75rem',
-          border: '1px solid #f0f0f0', boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
-        }}>
+        <div style={{ background: '#fff', borderRadius: '1.25rem', padding: '1.75rem', border: '1px solid #f0f0f0', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
           <form onSubmit={handleLookup} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#9ca3af', marginBottom: '0.5rem' }}>
-                Request ID
-              </label>
-              <input
-                type="text" className="lookup-input"
-                placeholder="HL-REQ-000001" value={input}
+              <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#9ca3af', marginBottom: '0.5rem' }}>Request ID</label>
+              <input type="text" className="lookup-input" placeholder="HL-REQ-000001" value={input}
                 onChange={(e) => { setInput(e.target.value); if (error) setError(null); }}
-                autoComplete="off" spellCheck={false} maxLength={16}
-              />
+                autoComplete="off" spellCheck={false} maxLength={16} />
             </div>
             {error && (
               <div style={{ padding: '0.625rem 0.875rem', background: '#fef2f2', border: '1px solid rgba(220,38,38,0.2)', borderRadius: '0.625rem', fontSize: '0.78rem', color: '#b91c1c', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -144,11 +125,9 @@ const PublicIdLookup = () => {
             It was shown when you first sent your SOS.
           </p>
         </div>
-
         <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'center' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '6px 14px', borderRadius: 999, background: '#fef2f2', border: '1px solid rgba(220,38,38,0.18)', fontSize: '0.68rem', color: '#b91c1c', fontWeight: 500 }}>
-            <span>⚠️</span>
-            <span>Life-threatening?</span>
+            <span>⚠️</span><span>Life-threatening?</span>
             <a href="tel:112" style={{ fontWeight: 800, color: '#dc2626', textDecoration: 'none' }}>Call 112</a>
           </div>
         </div>
@@ -158,7 +137,7 @@ const PublicIdLookup = () => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Activity Feed Item
+// ActivityItem
 // ─────────────────────────────────────────────────────────────────────────────
 const ActivityItem = ({ icon, iconBg, iconColor, label, sublabel, time, isFirst }) => (
   <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.875rem', position: 'relative' }}>
@@ -184,10 +163,8 @@ const ActivityItem = ({ icon, iconBg, iconColor, label, sublabel, time, isFirst 
     )}
     {isFirst && (
       <div style={{
-        paddingTop: '0.45rem',
-        display: 'inline-flex', alignItems: 'center',
-        background: '#dc2626', borderRadius: 4,
-        padding: '2px 7px',
+        paddingTop: '0.45rem', display: 'inline-flex', alignItems: 'center',
+        background: '#dc2626', borderRadius: 4, padding: '2px 7px',
         fontSize: '0.6rem', fontWeight: 800, color: '#fff',
         letterSpacing: '0.1em', textTransform: 'uppercase',
         height: 'fit-content', flexShrink: 0,
@@ -201,48 +178,76 @@ const ActivityItem = ({ icon, iconBg, iconColor, label, sublabel, time, isFirst 
 // ─────────────────────────────────────────────────────────────────────────────
 const GuestTracking = () => {
   const { requestId } = useParams();
-
   if (!requestId) return <PublicIdLookup />;
 
-  const location       = useLocation();
-  const navigate       = useNavigate();
+  const location        = useLocation();
+  const navigate        = useNavigate();
   const guidanceFromNav = location.state?.guidance || null;
 
   const { requestStatus, setRequestStatus } = useRequests();
   const socketRef = useRef(null);
 
-  const [helper, setHelper] = useState(() => {
+  const [helper,         setHelper]         = useState(() => {
     const saved = localStorage.getItem('helper');
     return saved ? JSON.parse(saved) : null;
   });
-
   const [requestData,    setRequestData]    = useState(null);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [isCompleted,    setIsCompleted]    = useState(false);
   const [isCancelled,    setIsCancelled]    = useState(false);
-
-  // ── Cancel modal state ────────────────────────────────────────────────────
-  const [showCancelModal,  setShowCancelModal]  = useState(false);
-  const [cancelLoading,    setCancelLoading]    = useState(false);
-  // ─────────────────────────────────────────────────────────────────────────
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelLoading,   setCancelLoading]   = useState(false);
 
   const photoInputRef = useRef(null);
+  const pollRef       = useRef(null);
 
-  // Activity feed simulation
-  const [notifiedCount, setNotifiedCount] = useState(0);
-  const [nearbyHelper,  setNearbyHelper]  = useState(null);
-  const [t2, setT2] = useState(null);
-  const [t3, setT3] = useState(null);
+  // ── ✅ Real activity feed state ───────────────────────────────────────────
+  // notifiedCount        — real count from backend (0 until first broadcast wave)
+  // nearestHelperDistance — km string e.g. "1.2" or null
+  // activityTimestamp    — seconds-since-page-load when the data first arrived
+  //                        (used for the "00:08" style timestamp in the feed row)
+  const pageLoadRef = useRef(Date.now());
+  const [notifiedCount,         setNotifiedCount]         = useState(0);
+  const [nearestHelperDistance, setNearestHelperDistance] = useState(null);
+  const [notifiedTimestamp,     setNotifiedTimestamp]     = useState(null); // seconds
+  const [nearbyTimestamp,       setNearbyTimestamp]       = useState(null); // seconds
+  // ─────────────────────────────────────────────────────────────────────────
 
   const images   = getImages(requestData);
   const hasImage = images.length > 0;
 
-  // Simulate activity feed progression (only while searching)
-  useEffect(() => {
-    const t  = setTimeout(() => { setNotifiedCount(2); setT2(8); }, 8000);
-    const t2h = setTimeout(() => { setNearbyHelper({ distance: '1.2 km' }); setT3(12); }, 12000);
-    return () => { clearTimeout(t); clearTimeout(t2h); };
+  // Format seconds → MM:SS for the activity feed timestamps
+  const fmtSec = (s) =>
+    `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+
+  // Current elapsed seconds since page load (for new timestamps)
+  const elapsedSec = () => Math.floor((Date.now() - pageLoadRef.current) / 1000);
+
+  // ── ✅ Apply an activity update (from socket OR from poll) ────────────────
+  // Accepts { notifiedCount, nearestHelperDistance } and merges into state.
+  // Both paths use this so there's a single source of truth.
+  const applyActivityUpdate = useCallback(({ notifiedCount: nc, nearestHelperDistance: nhd }) => {
+    if (nc != null && nc > 0) {
+      setNotifiedCount(prev => {
+        const next = Math.max(prev, nc); // never go backwards
+        if (prev === 0 && next > 0) {
+          // Record when we first got a notified count
+          setNotifiedTimestamp(elapsedSec());
+        }
+        return next;
+      });
+    }
+    if (nhd != null) {
+      setNearestHelperDistance(prev => {
+        if (prev === null) {
+          // Record when we first found a nearby helper
+          setNearbyTimestamp(elapsedSec());
+        }
+        return nhd;
+      });
+    }
   }, []);
+  // ─────────────────────────────────────────────────────────────────────────
 
   // ── Socket ────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -289,18 +294,28 @@ const GuestTracking = () => {
       }
     });
 
-    // ✅ NEW — listen for server-side cancellation (e.g. admin cancels)
     socket.on('request_cancelled', (data) => {
       if (data?.requestId === requestId || data?.requestId?.toString() === requestId) {
         setIsCancelled(true);
-        setRequestStatus('searching'); // reset so UI re-evaluates
       }
     });
+
+    // ── ✅ NEW: Real activity feed listener ───────────────────────────────
+    // Fired by notificationService and rebroadcastService after each
+    // broadcast wave. Replaces the old fake setTimeout entirely.
+    socket.on('sos_activity_update', (data) => {
+      if (data?.requestId !== requestId && data?.requestId?.toString() !== requestId) return;
+      applyActivityUpdate({
+        notifiedCount:         data.notifiedCount,
+        nearestHelperDistance: data.nearestHelperDistance,
+      });
+    });
+    // ── END: Activity feed listener ───────────────────────────────────────
 
     socket.on('connect_error', (err) => console.error('Guest socket error:', err));
 
     return () => { socket.disconnect(); socketRef.current = null; };
-  }, [requestId, setRequestStatus]);
+  }, [requestId, setRequestStatus, applyActivityUpdate]);
 
   // ── Poll ──────────────────────────────────────────────────────────────────
   const fetchRequest = useCallback(async () => {
@@ -312,6 +327,16 @@ const GuestTracking = () => {
       if (!res.data) return;
       const data = res.data;
       setRequestData(data);
+
+      // ── ✅ Seed activity feed from poll response ───────────────────────
+      // This handles the case where the user reloads the page after helpers
+      // were already notified — the socket event was missed but the DB has
+      // the persisted counts which the GET route now returns.
+      applyActivityUpdate({
+        notifiedCount:         data.notifiedCount         ?? 0,
+        nearestHelperDistance: data.nearestHelperDistance ?? null,
+      });
+      // ─────────────────────────────────────────────────────────────────────
 
       if (data.status === 'cancelled') {
         setIsCancelled(true);
@@ -331,9 +356,8 @@ const GuestTracking = () => {
     } catch (err) {
       console.error('Failed to fetch request:', err);
     }
-  }, [requestId, setRequestStatus]);
+  }, [requestId, setRequestStatus, applyActivityUpdate]);
 
-  const pollRef = useRef(null);
   useEffect(() => {
     if (!requestId) return;
     fetchRequest();
@@ -346,7 +370,6 @@ const GuestTracking = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (hasImage) { toast.error('You can only add one photo as a guest.'); return; }
-
     setPhotoUploading(true);
     try {
       const formData = new FormData();
@@ -364,7 +387,7 @@ const GuestTracking = () => {
     }
   }, [requestId, hasImage, fetchRequest]);
 
-  // ── ✅ Cancel handler — called by CancelRequestModal with a reason string ─
+  // ── Cancel handler ────────────────────────────────────────────────────────
   const handleCancelConfirm = useCallback(async (reason) => {
     setCancelLoading(true);
     try {
@@ -376,27 +399,21 @@ const GuestTracking = () => {
       );
       setShowCancelModal(false);
       setIsCancelled(true);
-      // Stop polling — no need to keep fetching a cancelled request
       if (pollRef.current) clearInterval(pollRef.current);
       toast.success('Your request has been cancelled.');
     } catch (err) {
-      const msg = err.response?.data?.message || 'Could not cancel request. Please try again.';
-      toast.error(msg);
+      toast.error(err.response?.data?.message || 'Could not cancel request. Please try again.');
     } finally {
       setCancelLoading(false);
     }
   }, [requestId]);
-  // ── END: Cancel handler ───────────────────────────────────────────────────
 
   const isSearching = requestStatus === 'searching' && !isCancelled;
   const isAccepted  = requestStatus === 'accepted'  && !isCancelled && !isCompleted;
   const publicId    = requestData?.publicId || null;
 
-  const fmtSec = (s) => `${String(Math.floor(s / 60)).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}`;
-
   return (
     <>
-      {/* ── Cancel Modal (portal-like, renders above everything) ── */}
       <CancelRequestModal
         isOpen={showCancelModal}
         onClose={() => setShowCancelModal(false)}
@@ -441,8 +458,6 @@ const GuestTracking = () => {
             box-shadow: 0 4px 16px rgba(220,38,38,0.3);
           }
           .cta-call:hover { background: #b91c1c; transform: translateY(-1px); box-shadow: 0 6px 24px rgba(220,38,38,0.4); }
-
-          /* Cancel button — active (only when request is still open/searching) */
           .cta-cancel {
             width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem;
             padding: 0.95rem; border-radius: 1rem;
@@ -451,8 +466,6 @@ const GuestTracking = () => {
             transition: border-color 0.15s, background 0.15s;
           }
           .cta-cancel:hover { border-color: rgba(220,38,38,0.4); background: #fef2f2; }
-
-          /* Cancel button — disabled state (accepted / completed) */
           .cta-cancel-disabled {
             width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem;
             padding: 0.95rem; border-radius: 1rem;
@@ -497,11 +510,7 @@ const GuestTracking = () => {
 
           {/* ── Heading ── */}
           <div className="fade-up-1" style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-            <h1 style={{
-              fontFamily: "'Playfair Display', Georgia, serif",
-              fontSize: 'clamp(1.6rem, 5vw, 2rem)', lineHeight: 1.15,
-              letterSpacing: '-0.025em', color: '#111827', marginBottom: '0.625rem',
-            }}>
+            <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(1.6rem, 5vw, 2rem)', lineHeight: 1.15, letterSpacing: '-0.025em', color: '#111827', marginBottom: '0.625rem' }}>
               {isCancelled ? (
                 <span style={{ color: '#dc2626' }}>Request cancelled.</span>
               ) : isCompleted ? (
@@ -526,33 +535,23 @@ const GuestTracking = () => {
           {/* ── Public ID badge ── */}
           {publicId && (
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
-                padding: '4px 12px', borderRadius: 999,
-                background: '#f3f4f6', border: '1px solid #e5e7eb',
-                fontSize: '0.62rem', fontFamily: 'monospace', fontWeight: 700,
-                letterSpacing: '0.1em', color: '#6b7280',
-              }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '4px 12px', borderRadius: 999, background: '#f3f4f6', border: '1px solid #e5e7eb', fontSize: '0.62rem', fontFamily: 'monospace', fontWeight: 700, letterSpacing: '0.1em', color: '#6b7280' }}>
                 <span style={{ opacity: 0.5 }}>ID</span>
                 <span style={{ color: '#111827' }}>{publicId}</span>
               </div>
             </div>
           )}
 
-          {/* ── Aftercare button (completed) ── */}
+          {/* ── Aftercare button ── */}
           {isCompleted && (
             <div className="fade-up-2" style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
               <AftercareButton requestId={requestId} />
             </div>
           )}
 
-          {/* ── Cancelled state info card ── */}
+          {/* ── Cancelled reason card ── */}
           {isCancelled && requestData?.cancellationReason && (
-            <div className="fade-up-2" style={{
-              background: '#fef2f2', border: '1px solid rgba(220,38,38,0.2)',
-              borderRadius: '1.25rem', padding: '1.125rem 1.25rem',
-              marginBottom: '1rem',
-            }}>
+            <div className="fade-up-2" style={{ background: '#fef2f2', border: '1px solid rgba(220,38,38,0.2)', borderRadius: '1.25rem', padding: '1.125rem 1.25rem', marginBottom: '1rem' }}>
               <p style={{ fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.2em', color: '#dc2626', marginBottom: '0.375rem' }}>
                 Cancellation Reason
               </p>
@@ -562,68 +561,60 @@ const GuestTracking = () => {
             </div>
           )}
 
-          {/* ── Activity Feed Card (searching state only) ── */}
+          {/* ── ✅ Activity Feed Card — now driven by REAL data ── */}
           {isSearching && (
             <div className="fade-up-2" style={{
               background: '#fff', borderRadius: '1.25rem',
               border: '1px solid #f0f0f0',
               boxShadow: '0 2px 16px rgba(0,0,0,0.05)',
-              padding: '1.25rem',
-              marginBottom: '1rem',
+              padding: '1.25rem', marginBottom: '1rem',
               display: 'flex', flexDirection: 'column', gap: '0.875rem',
             }}>
+              {/* Row 1 — always shown; LIVE badge while open */}
               <ActivityItem
                 isFirst
                 icon={<path d="M1.5 8.5c2.9-3.8 7.1-6 10.5-6s7.6 2.2 10.5 6M5 12c1.9-2.3 4.3-3.5 7-3.5s5.1 1.2 7 3.5M8.5 15.5c1-1.2 2.2-1.8 3.5-1.8s2.5.6 3.5 1.8M12 19h.01"/>}
                 iconBg="rgba(220,38,38,0.1)" iconColor="#dc2626"
                 label="Searching for nearby helpers..."
               />
+
+              {/* Row 2 — appears once notifiedCount > 0 (real data from backend) */}
               {notifiedCount > 0 && (
-                <div style={{ width: 1, height: 16, background: 'repeating-linear-gradient(to bottom, #d1d5db 0, #d1d5db 4px, transparent 4px, transparent 8px)', marginLeft: 19 }} />
+                <>
+                  <div style={{ width: 1, height: 16, background: 'repeating-linear-gradient(to bottom, #d1d5db 0, #d1d5db 4px, transparent 4px, transparent 8px)', marginLeft: 19 }} />
+                  <ActivityItem
+                    icon={<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></>}
+                    iconBg="#f3f4f6" iconColor="#6b7280"
+                    label={`${notifiedCount} ${notifiedCount === 1 ? 'person' : 'people'} notified`}
+                    time={notifiedTimestamp !== null ? fmtSec(notifiedTimestamp) : null}
+                  />
+                </>
               )}
-              {notifiedCount > 0 && (
-                <ActivityItem
-                  icon={<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></>}
-                  iconBg="#f3f4f6" iconColor="#6b7280"
-                  label={`${notifiedCount} people notified`}
-                  time={t2 ? fmtSec(t2) : null}
-                />
-              )}
-              {notifiedCount > 0 && nearbyHelper && (
-                <div style={{ width: 1, height: 16, background: 'repeating-linear-gradient(to bottom, #d1d5db 0, #d1d5db 4px, transparent 4px, transparent 8px)', marginLeft: 19 }} />
-              )}
-              {nearbyHelper && (
-                <ActivityItem
-                  icon={<><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></>}
-                  iconBg="rgba(34,197,94,0.12)" iconColor="#16a34a"
-                  label="1 helper nearby"
-                  sublabel={nearbyHelper.distance ? `${nearbyHelper.distance} away` : null}
-                  time={t3 ? fmtSec(t3) : null}
-                />
+
+              {/* Row 3 — appears once nearestHelperDistance is set (real data) */}
+              {nearestHelperDistance !== null && (
+                <>
+                  <div style={{ width: 1, height: 16, background: 'repeating-linear-gradient(to bottom, #d1d5db 0, #d1d5db 4px, transparent 4px, transparent 8px)', marginLeft: 19 }} />
+                  <ActivityItem
+                    icon={<><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></>}
+                    iconBg="rgba(34,197,94,0.12)" iconColor="#16a34a"
+                    label="1 helper nearby"
+                    sublabel={`${nearestHelperDistance} km away`}
+                    time={nearbyTimestamp !== null ? fmtSec(nearbyTimestamp) : null}
+                  />
+                </>
               )}
             </div>
           )}
 
           {/* ── Helper card (accepted) ── */}
           {isAccepted && helper && (
-            <div className="fade-up-2" style={{
-              background: '#f0fdf4', border: '1px solid rgba(74,222,128,0.35)',
-              borderRadius: '1.25rem', padding: '1.25rem',
-              boxShadow: '0 4px 16px rgba(21,128,61,0.08)',
-              marginBottom: '1rem',
-            }}>
+            <div className="fade-up-2" style={{ background: '#f0fdf4', border: '1px solid rgba(74,222,128,0.35)', borderRadius: '1.25rem', padding: '1.25rem', boxShadow: '0 4px 16px rgba(21,128,61,0.08)', marginBottom: '1rem' }}>
               <p style={{ fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.2em', color: '#15803d', marginBottom: '0.75rem' }}>
                 Assigned Helper
               </p>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-                <div style={{
-                  width: 44, height: 44, borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #166534, #22c55e)',
-                  border: '2px solid rgba(74,222,128,0.4)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#fff', fontWeight: 700, fontSize: '1.1rem', flexShrink: 0,
-                  boxShadow: '0 4px 12px rgba(21,128,61,0.3)',
-                }}>
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, #166534, #22c55e)', border: '2px solid rgba(74,222,128,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: '1.1rem', flexShrink: 0, boxShadow: '0 4px 12px rgba(21,128,61,0.3)' }}>
                   {helper.name?.charAt(0)?.toUpperCase() || '?'}
                 </div>
                 <div>
@@ -636,13 +627,7 @@ const GuestTracking = () => {
 
           {/* ── Quick Guidance Card ── */}
           {!isCompleted && !isCancelled && (
-            <div className="fade-up-3" style={{
-              background: '#fff', borderRadius: '1.25rem',
-              border: '1px solid #f0f0f0',
-              boxShadow: '0 2px 16px rgba(0,0,0,0.04)',
-              padding: '1.125rem 1.25rem',
-              marginBottom: '1rem',
-            }}>
+            <div className="fade-up-3" style={{ background: '#fff', borderRadius: '1.25rem', border: '1px solid #f0f0f0', boxShadow: '0 2px 16px rgba(0,0,0,0.04)', padding: '1.125rem 1.25rem', marginBottom: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.875rem' }}>
                 <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(220,38,38,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -652,10 +637,10 @@ const GuestTracking = () => {
                 <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#dc2626' }}>Quick guidance</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-                {(guidanceFromNav && guidanceFromNav.length > 0 ? guidanceFromNav.slice(0,3) : [
-                  "Stay where you are if it's safe.",
-                  'Keep your phone active.',
-                ]).map((tip, i) => (
+                {(guidanceFromNav && guidanceFromNav.length > 0
+                  ? guidanceFromNav.slice(0, 3)
+                  : ["Stay where you are if it's safe.", 'Keep your phone active.']
+                ).map((tip, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.625rem' }}>
                     <div style={{ flexShrink: 0, marginTop: 2 }}>
                       {i === 0 ? (
@@ -675,35 +660,15 @@ const GuestTracking = () => {
             </div>
           )}
 
-          {/* ── Photo section ── */}
+          {/* ── Photo upload button ── */}
           {!isAccepted && !isCompleted && !isCancelled && !hasImage && (
             <div className="fade-up-3" style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
-              <button
-                type="button" disabled={photoUploading}
-                onClick={() => photoInputRef.current?.click()}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
-                  padding: '8px 20px', borderRadius: 999,
-                  background: '#fff', border: '1.5px dashed rgba(220,38,38,0.35)',
-                  color: '#9ca3af', fontSize: '0.78rem', fontWeight: 600,
-                  cursor: photoUploading ? 'default' : 'pointer',
-                  opacity: photoUploading ? 0.6 : 1, transition: 'all 0.2s',
-                }}
-              >
+              <button type="button" disabled={photoUploading} onClick={() => photoInputRef.current?.click()}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '8px 20px', borderRadius: 999, background: '#fff', border: '1.5px dashed rgba(220,38,38,0.35)', color: '#9ca3af', fontSize: '0.78rem', fontWeight: 600, cursor: photoUploading ? 'default' : 'pointer', opacity: photoUploading ? 0.6 : 1, transition: 'all 0.2s' }}>
                 {photoUploading ? (
-                  <>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: 'spin 0.85s linear infinite' }}>
-                      <circle cx="12" cy="12" r="10" strokeOpacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round"/>
-                    </svg>
-                    Uploading…
-                  </>
+                  <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: 'spin 0.85s linear infinite' }}><circle cx="12" cy="12" r="10" strokeOpacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round"/></svg>Uploading…</>
                 ) : (
-                  <>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
-                    </svg>
-                    + Add photo <span style={{ fontWeight: 400, fontSize: '0.7rem', opacity: 0.7 }}>(optional)</span>
-                  </>
+                  <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>+ Add photo <span style={{ fontWeight: 400, fontSize: '0.7rem', opacity: 0.7 }}>(optional)</span></>
                 )}
               </button>
               <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleGuestPhotoUpload} />
@@ -722,8 +687,6 @@ const GuestTracking = () => {
 
           {/* ── CTA Buttons ── */}
           <div className="fade-up-4" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1rem' }}>
-
-            {/* Call 112 — always shown */}
             <a href="tel:112" className="cta-call">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.58 3.44 2 2 0 0 1 3.55 1.25h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.84a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 16.92z"/>
@@ -734,22 +697,14 @@ const GuestTracking = () => {
               </div>
             </a>
 
-            {/* ── ✅ Cancel button — conditional rendering based on request state ── */}
-            {/* CASE 1: Request is still open/searching → active cancel button */}
             {isSearching && (
-              <button
-                type="button"
-                className="cta-cancel"
-                onClick={() => setShowCancelModal(true)}
-              >
+              <button type="button" className="cta-cancel" onClick={() => setShowCancelModal(true)}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                 </svg>
                 Cancel Request
               </button>
             )}
-
-            {/* CASE 2: Already accepted → disabled cancel with tooltip-like hint */}
             {isAccepted && !isCompleted && !isCancelled && (
               <div className="cta-cancel-disabled" title="Cannot cancel — a helper has already accepted.">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -758,18 +713,14 @@ const GuestTracking = () => {
                 Cannot cancel — helper assigned
               </div>
             )}
-
-            {/* CASE 3: Completed → disabled cancel */}
             {isCompleted && (
-              <div className="cta-cancel-disabled" title="Request has already been completed.">
+              <div className="cta-cancel-disabled">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="20 6 9 17 4 12"/>
                 </svg>
                 Request completed
               </div>
             )}
-
-            {/* CASE 4: Already cancelled → show neutral state */}
             {isCancelled && (
               <div className="cta-cancel-disabled">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -778,10 +729,9 @@ const GuestTracking = () => {
                 Request cancelled
               </div>
             )}
-            {/* ── END: Cancel button ── */}
           </div>
 
-          {/* ── Footer note ── */}
+          {/* ── Footer ── */}
           <div className="fade-up-4" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem' }}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>

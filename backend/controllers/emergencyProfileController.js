@@ -36,7 +36,7 @@ const upsertProfile = async (req, res) => {
         userId: req.user._id
       },
       {
-        new: true,
+        returnDocument: 'after',
         upsert: true,
         runValidators: true
       }

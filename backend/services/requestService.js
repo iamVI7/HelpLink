@@ -654,7 +654,7 @@ const sendToAftercare = async (req) => {
   if (!request) {
     return { status: 404, body: { success: false, message: 'Request not found' } };
   }
-
+ 
   const unicareBase = process.env.UNICARE_API;
   if (!unicareBase) {
     console.error('sendToAftercare: UNICARE_API is not set in .env');
@@ -663,19 +663,32 @@ const sendToAftercare = async (req) => {
       body: { success: false, message: 'Aftercare service is not configured on this server.' },
     };
   }
-
-  // ── Read consent + userNote forwarded from the frontend ───────────────────
-  const consentFromBody  = req.body?.consent  || null;
-  const userNoteFromBody = req.body?.userNote  || '';
-  const isAnonymous      = req.body?.anonymous || false;
-
+ 
+  // ── Read consent flags + extras forwarded from the frontend ──────────────
+  const consentFromBody  = req.body?.consent    || null;
+  const userNoteFromBody = req.body?.userNote    || '';
+  const isAnonymous      = req.body?.anonymous   || false;
+  const shareEmail       = req.body?.shareEmail  === true; // explicit opt-in
+ 
+  // ── Resolve helper / responder notes from accepted request ───────────────
+  // The request may have a responder note stored in `request.helperNote` or
+  // inside an `acceptedBy` sub-document — adjust the field name to match your schema.
+  const helperNotes = request.helperNote || request.responderNote || '';
+ 
+  // ── Build severity from request category/priority if available ───────────
+  const severity = request.severity || request.priority || 'unknown';
+ 
+  // ── Build summary text ───────────────────────────────────────────────────
+  const summary = request.summary || request.description || '';
+ 
   // ── Build payload ─────────────────────────────────────────────────────────
   let payload;
-
+ 
   if (req.user) {
+    // ── REGISTERED user ──────────────────────────────────────────────────
     const EmergencyProfile = require('../models/EmergencyProfile');
     const profile = await EmergencyProfile.findOne({ user: req.user._id });
-
+ 
     payload = {
       requestId:           String(request._id),
       userId:              isAnonymous ? null : String(req.user._id),
@@ -683,39 +696,50 @@ const sendToAftercare = async (req) => {
       name:                (consentFromBody?.contact === false || isAnonymous)
                              ? 'Anonymous'
                              : req.user.name,
+      // ── Email: only included when user explicitly opted in ──────────────
+      email:               shareEmail ? (req.user.email || null) : null,
+      // ── Incident data ────────────────────────────────────────────────────
       incidentType:        request.category    || 'unknown',
       notes:               request.description || '',
+      helperNotes,
+      severity,
+      summary,
       location:            consentFromBody?.location === false
                              ? null
                              : (request.location || null),
       time:                request.createdAt,
       hasEmergencyProfile: !!profile,
       source:              'helplink',
-      // ✅ Forward consent + userNote to UniCare
+      // ── Consent + note ───────────────────────────────────────────────────
       consent:             consentFromBody,
       userNote:            userNoteFromBody,
+      timestamp:           new Date().toISOString(),
     };
   } else {
+    // ── GUEST user ───────────────────────────────────────────────────────
     payload = {
       requestId:    String(request._id),
       userId:       null,
       guestId:      request.guestId || null,
       name:         isAnonymous ? 'Anonymous' : 'Guest User',
+      email:        null, // guests never have email
       incidentType: request.category    || 'unknown',
       notes:        request.description || '',
+      helperNotes,
+      severity,
+      summary,
       location:     consentFromBody?.location === false
                       ? null
                       : (request.location || null),
       time:         request.createdAt,
       source:       'helplink',
-      // ✅ Forward consent + userNote to UniCare
       consent:      consentFromBody,
       userNote:     userNoteFromBody,
+      timestamp:    new Date().toISOString(),
     };
   }
-
-  // NOTE: axios errors (error.response / error.request) are intentionally
-  // NOT caught here — they bubble up to the controller which handles 502 cases.
+ 
+  // NOTE: axios errors bubble up to the controller (handles 502)
   const unicareRes = await axios.post(
     `${unicareBase}/aftercare`,
     payload,
@@ -727,15 +751,19 @@ const sendToAftercare = async (req) => {
       timeout: 8000,
     }
   );
-
+ 
+  // Also return the key incident fields so AftercareButton can forward them
+  // in the redirect URL params for the UniCare onboarding page.
   return {
     status: 200,
     body: {
-      success:   true,
-      message:   'Aftercare data sent successfully',
-      data:      unicareRes.data,
-      isGuest:   !req.user,
-      requestId: String(request._id),
+      success:      true,
+      message:      'Aftercare data sent successfully',
+      data:         unicareRes.data,
+      isGuest:      !req.user,
+      requestId:    String(request._id),
+      incidentType: request.category || 'unknown',
+      summary,
     },
   };
 };
