@@ -152,25 +152,116 @@ const trackByPublicId = async (req, res) => {
 // @desc    Send basic incident data to UniCare aftercare endpoint
 // @route   POST /api/requests/:id/aftercare
 // @access  Public (guests + logged-in users)
+// ─────────────────────────────────────────────────────────────────────────────
+// REPLACE only sendToAftercare in helplink/backend/controllers/requestController.js
+// ─────────────────────────────────────────────────────────────────────────────
+
 const sendToAftercare = async (req, res) => {
   try {
-    send(res, await requestService.sendToAftercare(req));
+    const request = await Request.findById(req.params.id);
+    if (!request) {
+      return res.status(404).json({ success: false, message: 'Request not found' });
+    }
+
+    const unicareBase = process.env.UNICARE_API;
+    if (!unicareBase) {
+      console.error('sendToAftercare: UNICARE_API is not set in .env');
+      return res.status(503).json({
+        success: false,
+        message: 'Aftercare service is not configured on this server.',
+      });
+    }
+
+    const consentFromBody  = req.body?.consent  || null;
+    const userNoteFromBody = req.body?.userNote  || '';
+    const isAnonymous      = req.body?.anonymous || false;
+
+    let payload;
+    if (req.user) {
+      const EmergencyProfile = require('../models/EmergencyProfile');
+      const profile = await EmergencyProfile.findOne({ user: req.user._id });
+      payload = {
+        requestId:           String(request._id),
+        userId:              isAnonymous ? null : String(req.user._id),
+        guestId:             null,
+        name:                (consentFromBody?.contact === false || isAnonymous) ? 'Anonymous' : req.user.name,
+        incidentType:        request.category    || 'unknown',
+        notes:               request.description || '',
+        location:            consentFromBody?.location === false ? null : (request.location || null),
+        time:                request.createdAt,
+        hasEmergencyProfile: !!profile,
+        source:              'helplink',
+        consent:             consentFromBody,
+        userNote:            userNoteFromBody,
+      };
+    } else {
+      payload = {
+        requestId:    String(request._id),
+        userId:       null,
+        guestId:      request.guestId || null,
+        name:         isAnonymous ? 'Anonymous' : 'Guest User',
+        incidentType: request.category    || 'unknown',
+        notes:        request.description || '',
+        location:     consentFromBody?.location === false ? null : (request.location || null),
+        time:         request.createdAt,
+        source:       'helplink',
+        consent:      consentFromBody,
+        userNote:     userNoteFromBody,
+      };
+    }
+
+    const sharedHeaders = {
+      'Content-Type': 'application/json',
+      'x-api-key':    process.env.AFTERCARE_SECRET || '',
+    };
+
+    // ── Step 1: Store AftercareCase (existing — unchanged) ────────────────
+    const aftercareRes = await axios.post(
+      `${unicareBase}/aftercare`,
+      payload,
+      { headers: sharedHeaders, timeout: 8000 }
+    );
+
+    const aftercareCaseId = aftercareRes.data?.caseId || null;
+
+    // ── Step 2: Create Temporary Recovery Session (NEW — non-fatal) ───────
+    let sessionToken = null;
+    try {
+      const recoveryRes = await axios.post(
+        `${unicareBase}/recovery/create`,
+        {
+          aftercareCaseId,
+          userId:  req.user ? String(req.user._id) : null,
+          guestId: !req.user ? (request.guestId || null) : null,
+          isGuest: !req.user,
+        },
+        { headers: sharedHeaders, timeout: 8000 }
+      );
+      sessionToken = recoveryRes.data?.sessionToken || null;
+    } catch (recoveryErr) {
+      console.error('sendToAftercare: recovery session creation failed (non-fatal):', recoveryErr.message);
+    }
+
+    return res.json({
+      success:      true,
+      message:      'Aftercare data sent successfully',
+      data:         aftercareRes.data,
+      isGuest:      !req.user,
+      requestId:    String(request._id),
+      sessionToken, // ✅ NEW — used by AftercareButton for snapshot page redirect
+    });
+
   } catch (error) {
     if (error.response) {
       console.error('sendToAftercare: UniCare returned', error.response.status, error.response.data);
-      return res.status(502).json({
-        success: false,
-        message: `UniCare service returned ${error.response.status}`,
-      });
+      return res.status(502).json({ success: false, message: `UniCare service returned ${error.response.status}` });
     }
     if (error.request) {
       console.error('sendToAftercare: No response from UniCare —', error.message);
-      return res.status(502).json({
-        success: false,
-        message: 'UniCare service is unreachable. Please make sure it is running.',
-      });
+      return res.status(502).json({ success: false, message: 'UniCare service is unreachable.' });
     }
-    handleError(res, error, 'sendToAftercare');
+    console.error('sendToAftercare error:', error.message);
+    return res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 };
 
@@ -199,19 +290,25 @@ const sendMedicalProfile = async (req, res) => {
   }
 };
 
-// ── ✅ NEW: Cancel Request ─────────────────────────────────────────────────────
-// @desc    Cancel a request (guest or user) — only allowed when status is 'open'
-//          Accepted or completed requests cannot be cancelled.
+// ── Cancel Request ─────────────────────────────────────────────────────────────
+// @desc    Cancel a request (guest or registered user)
+//
+// Cancellation rules by actor:
+//   Guest      — only allowed when status is 'open'. Blocked on 'accepted'.
+//   Registered — allowed on both 'open' and 'accepted'.
+//                'open'     → no reason required (stored as "No reason provided")
+//                'accepted' → reason required by frontend; helper notified via socket
+//   Admin      — allowed on both 'open' and 'accepted'.
+//
 // @route   PATCH /api/requests/:id/cancel
 // @access  Public (guests via guestId query param) + Private (authenticated users)
 // ─────────────────────────────────────────────────────────────────────────────
 const cancelRequest = async (req, res) => {
   try {
     const Request = require('../models/Request');
-    const { getSocketIO } = require('../socket');
+    const { getSocketIO, getUserSocketId } = require('../socket');
 
-    const { id } = req.params;
-    // reason comes from request body as a plain string
+    const { id }     = req.params;
     const { reason } = req.body;
 
     // ── 1. Find the request ───────────────────────────────────────────────
@@ -220,26 +317,9 @@ const cancelRequest = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Request not found.' });
     }
 
-    // ── 2. Guard: only 'open' requests can be cancelled ──────────────────
-    // 'accepted'  → a helper is already on the way, cannot cancel
-    // 'completed' → already resolved, cannot cancel
-    // 'cancelled' → already cancelled, idempotent but block double-cancel
-    if (request.status !== 'open') {
-      const msgs = {
-        accepted:  'This request has already been accepted by a helper and cannot be cancelled.',
-        completed: 'This request has already been completed and cannot be cancelled.',
-        cancelled: 'This request has already been cancelled.',
-      };
-      return res.status(400).json({
-        success: false,
-        message: msgs[request.status] || 'This request cannot be cancelled in its current state.',
-      });
-    }
-
-    // ── 3. Ownership check ────────────────────────────────────────────────
-    // Guests: must provide matching guestId in query or body
-    // Logged-in users: must own the request OR be admin
+    // ── 2. Ownership check ────────────────────────────────────────────────
     const guestIdParam = req.query.guestId || req.body.guestId;
+
     const isGuestOwner =
       (request.isGuest || request.requesterType === 'guest') &&
       request.guestId &&
@@ -260,35 +340,76 @@ const cancelRequest = async (req, res) => {
       });
     }
 
+    // ── 3. Status guard — rules differ by actor ───────────────────────────
+    if (request.status === 'cancelled') {
+      return res.status(400).json({
+        success: false,
+        message: 'This request has already been cancelled.',
+      });
+    }
+
+    if (request.status === 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'This request has already been completed and cannot be cancelled.',
+      });
+    }
+
+    if (request.status === 'accepted' && isGuestOwner) {
+      // Guests cannot cancel once a helper is assigned
+      return res.status(400).json({
+        success: false,
+        message: 'This request has already been accepted by a helper and cannot be cancelled.',
+      });
+    }
+
+    // Registered users and admins may cancel 'open' or 'accepted' — fall through
+
     // ── 4. Determine who is cancelling ───────────────────────────────────
     let cancelledBy = 'guest';
-    if (isAdmin) cancelledBy = 'admin';
+    if (isAdmin)      cancelledBy = 'admin';
     else if (isUserOwner) cancelledBy = 'user';
 
     // ── 5. Persist cancellation ───────────────────────────────────────────
     request.status             = 'cancelled';
     request.cancelledBy        = cancelledBy;
-    request.cancellationReason = reason || 'No reason provided';
+    request.cancellationReason = reason?.trim() || 'No reason provided';
     request.cancelledAt        = new Date();
     await request.save();
 
-    // ── 6. Emit real-time event so helpers remove it from their feed ──────
+    // ── 6. Emit real-time events ──────────────────────────────────────────
     try {
       const io = getSocketIO();
-      // Notify everyone in this request's room (helpers watching it)
-      io.to(`request_${id}`).emit('request_cancelled', {
+
+      const payload = {
         requestId: id,
         reason:    request.cancellationReason,
-      });
-      // Also notify the SOS guest room if applicable
+      };
+
+      // Everyone watching this request's detail page
+      io.to(`request_${id}`).emit('request_cancelled', payload);
+
+      // Helpers browsing the nearby feed (viewers room)
+      io.to(`viewers_${id}`).emit('request_cancelled', payload);
+
+      // Guest SOS room if applicable
       if (request.guestId) {
-        io.to(`sos_${request.guestId}`).emit('request_cancelled', {
-          requestId: id,
-          reason:    request.cancellationReason,
-        });
+        io.to(`sos_${request.guestId}`).emit('request_cancelled', payload);
       }
+
+      // ── Direct notification to the assigned helper ─────────────────────
+      // Uses userSocketMap (userId → socketId) so the helper receives it
+      // regardless of which page they're currently on — no personal room needed.
+      if (request.acceptedBy) {
+        const helperSocketId = getUserSocketId(request.acceptedBy.toString());
+        if (helperSocketId) {
+          io.to(helperSocketId).emit('request_cancelled', payload);
+          console.log(`🚫 Notified helper ${request.acceptedBy} directly via socket ${helperSocketId}`);
+        }
+      }
+
     } catch (socketErr) {
-      // Socket failure should NOT block the HTTP response
+      // Socket failure must never block the HTTP response
       console.warn('cancelRequest: socket emit failed —', socketErr.message);
     }
 
@@ -332,6 +453,6 @@ module.exports = {
   sendMedicalProfile,
   // ✅ Public ID tracking
   trackByPublicId,
-  // ✅ NEW — Cancel Request
+  // ✅ Cancel Request
   cancelRequest,
 };

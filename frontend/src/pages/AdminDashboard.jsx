@@ -5,6 +5,9 @@ import { useSocket } from '../context/SocketContext';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import AdminMiniMap from '../components/AdminMiniMap';
+import ConfirmModal from '../components/modals/ConfirmModal';
+import WarnModal from '../components/modals/WarnModal';
+import EvidenceModal from '../components/modals/EvidenceModal';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared primitives
@@ -28,8 +31,12 @@ const StatusBadge = ({ status }) => {
     open:          'text-green-700 bg-green-50 border-green-200',
     'in-progress': 'text-blue-700 bg-blue-50 border-blue-200',
     completed:     'text-stone-500 bg-stone-50 border-stone-200',
+    cancelled:     'text-red-600 bg-red-50 border-red-200',
   };
-  const label = { open: 'Open', 'in-progress': 'In Progress', completed: 'Completed' };
+  const label = {
+    open: 'Open', 'in-progress': 'In Progress',
+    completed: 'Completed', cancelled: 'Cancelled',
+  };
   const key = status ?? 'open';
   return (
     <span className={`inline-flex items-center border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest rounded-lg ${map[key] ?? map.open}`}>
@@ -219,223 +226,6 @@ const AdminSkeleton = () => (
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ConfirmModal
-// ─────────────────────────────────────────────────────────────────────────────
-const ConfirmModal = ({ open, onClose, onConfirm, title, description, confirmLabel = 'Confirm', variant = 'danger' }) => {
-  useEffect(() => {
-    if (!open) return;
-    const h = (e) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', h);
-    return () => window.removeEventListener('keydown', h);
-  }, [open, onClose]);
-
-  if (!open) return null;
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4"
-      style={{ backgroundColor: 'rgba(26,23,20,0.45)', backdropFilter: 'blur(4px)' }}
-      onClick={onClose}
-    >
-      <div
-        className="bg-white border border-stone-200 rounded-2xl w-full max-w-sm p-6 sm:p-8 shadow-2xl"
-        style={{ animation: 'modalIn 0.18s ease both' }}
-        onClick={e => e.stopPropagation()}
-      >
-        <p className="text-[10px] uppercase tracking-[0.18em] font-bold mb-5" style={{ color: variant === 'danger' ? '#dc2626' : '#15803d' }}>
-          {variant === 'danger' ? 'Confirm action' : 'Confirm restore'}
-        </p>
-        <h3 className="text-xl text-stone-900 mb-2 leading-snug" style={{ fontFamily: "'Fraunces', Georgia, serif", letterSpacing: '-0.01em' }}>
-          {title}
-        </h3>
-        {description && <p className="text-sm text-stone-400 leading-relaxed mt-1">{description}</p>}
-        <div className="flex items-center gap-3 mt-8">
-          <button onClick={onClose} className="flex-1 px-4 py-2.5 border border-stone-200 text-stone-600 text-xs font-semibold tracking-wide uppercase rounded-xl hover:bg-stone-50 transition-colors">
-            Cancel
-          </button>
-          <button
-            onClick={() => { onConfirm(); onClose(); }}
-            className={`flex-1 px-4 py-2.5 text-white text-xs font-semibold tracking-wide uppercase rounded-xl transition-colors ${variant === 'danger' ? 'bg-red-600 hover:bg-red-500' : 'bg-stone-800 hover:bg-stone-700'}`}
-          >
-            {confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// WarnModal
-// ─────────────────────────────────────────────────────────────────────────────
-const WarnModal = ({ open, onClose, onConfirm, loading }) => {
-  const [message, setMessage] = useState('');
-  useEffect(() => { if (open) setMessage(''); }, [open]);
-  useEffect(() => {
-    if (!open) return;
-    const h = (e) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', h);
-    return () => window.removeEventListener('keydown', h);
-  }, [open, onClose]);
-
-  if (!open) return null;
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4"
-      style={{ backgroundColor: 'rgba(26,23,20,0.5)', backdropFilter: 'blur(6px)' }}
-      onClick={onClose}
-    >
-      <div
-        className="bg-white border border-stone-200 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden"
-        style={{ animation: 'modalIn 0.18s ease both' }}
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="px-6 pt-6 pb-5 border-b border-stone-100">
-          <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-amber-600 mb-3">Issue Warning</p>
-          <h2 className="text-lg text-stone-900 leading-snug" style={{ fontFamily: "'Fraunces', Georgia, serif", letterSpacing: '-0.01em' }}>
-            Issue a Warning
-          </h2>
-        </div>
-        <div className="px-6 py-5">
-          <label className="block text-[10px] font-bold uppercase tracking-[0.14em] text-stone-400 mb-2">Warning Message</label>
-          <textarea
-            rows={4} value={message} onChange={(e) => setMessage(e.target.value)}
-            placeholder="Describe the reason for this warning…"
-            className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm text-stone-900 placeholder-stone-300 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/15 resize-none transition-all"
-            style={{ fontFamily: "'DM Sans', sans-serif" }}
-          />
-          <p className="text-[10px] text-stone-300 mt-2 tracking-wide">This message will be recorded and associated with the user's account.</p>
-        </div>
-        <div className="px-6 pb-6 flex items-center gap-3">
-          <button onClick={onClose} className="flex-1 px-4 py-2.5 border border-stone-200 text-stone-600 text-xs font-semibold tracking-wide uppercase rounded-xl hover:bg-stone-50 transition-colors">
-            Cancel
-          </button>
-          <button
-            onClick={() => onConfirm(message)}
-            disabled={!message.trim() || loading}
-            className="flex-1 px-4 py-2.5 text-white text-xs font-bold uppercase tracking-wide rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{ background: (!message.trim() || loading) ? '#d97706' : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}
-          >
-            {loading ? 'Sending…' : 'Issue Warning'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// EvidenceModal
-// ─────────────────────────────────────────────────────────────────────────────
-const EvidenceModal = ({ open, onClose, request }) => {
-  const [activeIdx, setActiveIdx] = useState(0);
-  useEffect(() => { if (open) setActiveIdx(0); }, [open, request]);
-  useEffect(() => {
-    if (!open) return;
-    const h = (e) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', h);
-    return () => window.removeEventListener('keydown', h);
-  }, [open, onClose]);
-
-  if (!open || !request) return null;
-  const images = request.media?.images?.filter(img => img.url) || [];
-  // BASE_URL removed — img.url is now a full Cloudinary URL
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4"
-      style={{ backgroundColor: 'rgba(26,23,20,0.65)', backdropFilter: 'blur(8px)' }}
-      onClick={onClose}
-    >
-      <div
-        className="bg-white border border-stone-200 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden"
-        style={{ animation: 'modalIn 0.18s ease both', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="px-6 pt-5 pb-4 border-b border-stone-100 flex items-start justify-between gap-3 shrink-0">
-          <div className="min-w-0">
-            <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-stone-400 mb-1">Incident Evidence</p>
-            <h3 className="text-base text-stone-900 leading-snug truncate" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
-              {request.title ?? 'Untitled Request'}
-            </h3>
-          </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors shrink-0">
-            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
-            </svg>
-          </button>
-        </div>
-        <div className="px-6 py-3 border-b border-stone-100 flex items-center gap-2 flex-wrap shrink-0">
-          <TypeBadge type={request.type} isSOS={request.isSOS} />
-          <UrgencyBadge level={request.urgency} />
-          <StatusBadge status={request.status} />
-          {request.createdBy?.name && <span className="text-[10px] text-stone-400 font-medium">by {request.createdBy.name}</span>}
-          <span className="text-[10px] text-stone-400 font-medium ml-auto shrink-0">{formatDate(request.createdAt)}</span>
-        </div>
-        <div className="overflow-y-auto flex-1 px-6 py-5">
-          {request.description && (
-            <div className="mb-5">
-              <p className="text-[10px] uppercase tracking-[0.14em] font-bold text-stone-400 mb-1.5">Description</p>
-              <p className="text-sm text-stone-700 leading-relaxed">{request.description}</p>
-            </div>
-          )}
-          {request.address && (
-            <div className="mb-5">
-              <p className="text-[10px] uppercase tracking-[0.14em] font-bold text-stone-400 mb-1.5">Location</p>
-              <p className="text-sm text-stone-600">📍 {request.address}</p>
-            </div>
-          )}
-          <div>
-            <p className="text-[10px] uppercase tracking-[0.14em] font-bold text-stone-400 mb-3">
-              Evidence Images
-              <span className="ml-2 normal-case font-semibold text-stone-300">({images.length} {images.length === 1 ? 'image' : 'images'})</span>
-            </p>
-            {images.length === 0 ? (
-              <div className="py-12 flex flex-col items-center justify-center border border-dashed border-stone-200 rounded-xl bg-stone-50">
-                <span className="text-3xl mb-2 opacity-20">📷</span>
-                <p className="text-xs text-stone-400 italic">No evidence images uploaded</p>
-              </div>
-            ) : (
-              <>
-                <div className="relative rounded-xl overflow-hidden border border-stone-200 bg-stone-50 mb-3" style={{ aspectRatio: '16/9' }}>
-                  <img src={images[activeIdx].url} alt={`Evidence ${activeIdx + 1}`} className="w-full h-full object-contain" />
-                  <a href={images[activeIdx].url} target="_blank" rel="noopener noreferrer"
-                    className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded-lg bg-black/50 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-black/70 transition-colors">
-                    Full Size
-                  </a>
-                  {images.length > 1 && <>
-                    <button onClick={() => setActiveIdx(i => (i - 1 + images.length) % images.length)}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors">‹</button>
-                    <button onClick={() => setActiveIdx(i => (i + 1) % images.length)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors">›</button>
-                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-black/40 text-white text-[10px] font-bold">{activeIdx + 1} / {images.length}</div>
-                  </>}
-                </div>
-                {images.length > 1 && (
-                  <div className="flex gap-2 flex-wrap">
-                    {images.map((img, idx) => (
-                      <button key={idx} onClick={() => setActiveIdx(idx)}
-                        className="w-14 h-14 rounded-lg overflow-hidden border-2 transition-all shrink-0"
-                        style={{ borderColor: idx === activeIdx ? '#1a1714' : 'transparent' }}>
-                        <img src={img.url} alt={`Thumb ${idx + 1}`} className="w-full h-full object-cover" />
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-        <div className="px-6 py-4 border-t border-stone-100 shrink-0">
-          <button onClick={onClose} className="w-full px-4 py-2.5 border border-stone-200 text-stone-600 text-xs font-semibold tracking-wide uppercase rounded-xl hover:bg-stone-50 transition-colors">
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
 // IconBtn + ActionButtons
 // ─────────────────────────────────────────────────────────────────────────────
 const IconBtn = ({ onClick, title, style, hoverStyle, children, badge }) => {
@@ -533,9 +323,22 @@ const RequestMobileCard = ({ req, onDelete, onViewEvidence, isLast, selected, on
           <div className="flex-1 min-w-0">
             <div className="mb-1.5"><TypeBadge type={req.type} isSOS={req.isSOS} /></div>
             <p className="font-semibold text-stone-900 text-sm leading-snug truncate">{req.title ?? req.type ?? 'Untitled'}</p>
-            {req.description && (
-              <p className="text-xs text-stone-400 mt-0.5 line-clamp-2">{req.description}</p>
-            )}
+{req.description && (
+  <p className="text-xs text-stone-400 mt-0.5 line-clamp-2">{req.description}</p>
+)}
+{req.status === 'cancelled' && (
+  <div className="mt-1.5 flex flex-col gap-0.5">
+    {req.cancellationReason && (
+      <p className="text-[10px] text-red-500 font-medium">✕ {req.cancellationReason}</p>
+    )}
+    {req.cancelledAt && (
+      <p className="text-[10px] text-stone-400">
+        Cancelled {formatDate(req.cancelledAt)}
+        {req.cancelledBy && ` · by ${req.cancelledBy}`}
+      </p>
+    )}
+  </div>
+)}
           </div>
           <button onClick={() => onDelete(req._id)} className="shrink-0 text-[10px] font-bold text-red-600 hover:text-red-800 uppercase tracking-widest transition-colors pt-0.5">
             Delete
@@ -719,11 +522,12 @@ const AdminDashboard = () => {
   });
 
   const requestFilterCounts = {
-    all:           activeRequests.length,
-    open:          activeRequests.filter(r => (r.status ?? 'open') === 'open').length,
-    'in-progress': activeRequests.filter(r => r.status === 'in-progress').length,
-    completed:     activeRequests.filter(r => r.status === 'completed').length,
-  };
+  all:           activeRequests.length,
+  open:          activeRequests.filter(r => (r.status ?? 'open') === 'open').length,
+  'in-progress': activeRequests.filter(r => r.status === 'in-progress').length,
+  completed:     activeRequests.filter(r => r.status === 'completed').length,
+  cancelled:     activeRequests.filter(r => r.status === 'cancelled').length,
+};
 
   // ── Single delete (existing) ──
   const confirmDeleteRequest = useCallback((id) => openModal({
@@ -967,7 +771,14 @@ const AdminDashboard = () => {
         title={modal.title} description={modal.description} confirmLabel={modal.confirmLabel} variant={modal.variant} />
       <WarnModal open={warnModal.open} onClose={() => setWarnModal({ open: false, userId: null })}
         onConfirm={handleIssueWarning} loading={warnLoading} />
-      <EvidenceModal open={evidenceModal.open} onClose={() => setEvidenceModal({ open: false, request: null })} request={evidenceModal.request} />
+      <EvidenceModal
+        open={evidenceModal.open}
+        onClose={() => setEvidenceModal({ open: false, request: null })}
+        request={evidenceModal.request}
+        UrgencyBadge={UrgencyBadge}
+        StatusBadge={StatusBadge}
+        TypeBadge={TypeBadge}
+      />
 
       <div style={{ position: 'relative', zIndex: 1 }}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 pb-16">
@@ -1081,11 +892,12 @@ const AdminDashboard = () => {
                         active={requestFilter}
                         onChange={setRequestFilter}
                         tabs={[
-                          { key: 'all',         label: 'All',    count: requestFilterCounts.all },
-                          { key: 'open',        label: 'Open',   count: requestFilterCounts.open },
-                          { key: 'in-progress', label: 'Active', count: requestFilterCounts['in-progress'] },
-                          { key: 'completed',   label: 'Done',   count: requestFilterCounts.completed },
-                        ]}
+  { key: 'all',         label: 'All',       count: requestFilterCounts.all },
+  { key: 'open',        label: 'Open',      count: requestFilterCounts.open },
+  { key: 'in-progress', label: 'Active',    count: requestFilterCounts['in-progress'] },
+  { key: 'completed',   label: 'Done',      count: requestFilterCounts.completed },
+  { key: 'cancelled',   label: 'Cancelled', count: requestFilterCounts.cancelled },
+]}
                       />
                     </div>
 
@@ -1172,10 +984,25 @@ const AdminDashboard = () => {
                                         <TypeBadge type={req.type} isSOS={req.isSOS} />
                                       </td>
                                       <td className="col-request px-4 py-3.5">
-                                        <div className="font-semibold text-stone-900 text-sm leading-snug">{req.title ?? 'Untitled'}</div>
-                                        {req.description && <div className="text-xs text-stone-400 mt-0.5 line-clamp-2">{req.description}</div>}
-                                        {req.createdBy?.name && <div className="text-[10px] text-stone-400 mt-0.5">by {req.createdBy.name}</div>}
-                                      </td>
+  <div className="font-semibold text-stone-900 text-sm leading-snug">{req.title ?? 'Untitled'}</div>
+  {req.description && <div className="text-xs text-stone-400 mt-0.5 line-clamp-2">{req.description}</div>}
+  {req.createdBy?.name && <div className="text-[10px] text-stone-400 mt-0.5">by {req.createdBy.name}</div>}
+  {req.status === 'cancelled' && (
+    <div className="mt-1.5 flex flex-col gap-0.5">
+      {req.cancellationReason && (
+        <div className="text-[10px] text-red-500 font-medium">
+          ✕ {req.cancellationReason}
+        </div>
+      )}
+      {req.cancelledAt && (
+        <div className="text-[10px] text-stone-400">
+          Cancelled {formatDate(req.cancelledAt)}
+          {req.cancelledBy && ` · by ${req.cancelledBy}`}
+        </div>
+      )}
+    </div>
+  )}
+</td>
                                       <td className="col-urgency px-4 py-3.5">
                                         <UrgencyBadge level={req.urgency} />
                                       </td>

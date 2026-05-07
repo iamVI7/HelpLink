@@ -1,21 +1,14 @@
 /**
- * REPLACEMENT for frontend/src/components/AftercareButton.jsx
+ * AftercareButton.jsx
  *
- * WHAT CHANGED vs the existing file:
+ * Change from previous version:
+ *   After sending aftercare data, the backend now returns a `sessionToken`
+ *   for the new Temporary Recovery Session. We redirect to:
+ *   /aftercare/session/:token  (the snapshot page)
+ *   instead of /aftercare/my or /aftercare/by-request/:id
  *
- *   1. For REGISTERED USERS, instead of redirecting to /aftercare/my?uid=...,
- *      this now redirects to /onboarding/helplink on UniCare, passing the user's
- *      email + name as URL params. UniCare then performs the conditional
- *      onboarding (find-or-create account, auto-login).
- *
- *   2. For GUEST USERS, the flow is unchanged — redirects to
- *      /aftercare/by-request/:requestId?guestId=...
- *      (guests do not need a UniCare account for that page)
- *
- *   3. All existing styling, modal logic, and API call are preserved.
- *
- * NO OTHER FILES in HelpLink need to change.
- * ──────────────────────────────────────────────────────────────────
+ *   Fallback: if sessionToken is missing (recovery creation failed non-fatally),
+ *   the old redirect behaviour is preserved as a safety net.
  */
 
 import React, { useState } from 'react';
@@ -60,34 +53,21 @@ const AftercareButton = ({ requestId, isGuest = false, style = {} }) => {
 
       setModalOpen(false);
 
+      // ── Primary redirect: snapshot page via sessionToken ─────────────────
+      if (data.sessionToken) {
+        window.location.href = `${UNICARE_BASE_URL}/aftercare/session/${data.sessionToken}`;
+        return;
+      }
+
+      // ── Fallback: old behaviour if recovery session creation failed ───────
       if (data.isGuest) {
-        // ── GUEST: unchanged redirect to guest aftercare page ─────────────
         const guestId = localStorage.getItem('guestId') || '';
         const qs      = guestId ? `?guestId=${encodeURIComponent(guestId)}` : '';
         window.location.href = `${UNICARE_BASE_URL}/aftercare/by-request/${data.requestId}${qs}`;
-
       } else {
-        // ── REGISTERED: redirect to UniCare onboarding/helplink ───────────
-        // UniCare will find-or-create the account and auto-login the user.
-        const params = new URLSearchParams();
-
-        // Pass email so UniCare can find/create the account
-        const email = user?.email || '';
-        if (email) params.set('email', email);
-
-        // Pass name for account creation fallback
-        const name = user?.name || user?.fullName || '';
-        if (name) params.set('name', name);
-
-        // Pass requestId to link recovery data
-        if (data.requestId) params.set('requestId', String(data.requestId));
-
-        // Pass incident info for the transfer payload
-        // These are populated if available in the response
-        if (data.incidentType) params.set('incident', data.incidentType);
-        if (data.summary)      params.set('summary',  data.summary);
-
-        window.location.href = `${UNICARE_BASE_URL}/onboarding/helplink?${params.toString()}`;
+        const userId = user?._id || user?.id || '';
+        const qs     = userId ? `?uid=${encodeURIComponent(String(userId))}` : '';
+        window.location.href = `${UNICARE_BASE_URL}/aftercare/my${qs}`;
       }
 
     } catch (err) {

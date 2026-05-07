@@ -33,7 +33,7 @@ export const SocketProvider = ({ children }) => {
   const {
     addRequest,
     addAdminRequest,
-    updateRequestState,   // ✅ FIX — was incorrectly imported as `updateRequest`
+    updateRequestState,
     setRequestStatus,
     fetchMyRequests,
     fetchMyAcceptedRequests,
@@ -48,7 +48,7 @@ export const SocketProvider = ({ children }) => {
     cbRef.current = {
       addRequest,
       addAdminRequest,
-      updateRequestState,   // ✅ FIX — was `updateRequest` (the PUT/edit fn)
+      updateRequestState,
       setRequestStatus,
       fetchMyRequests,
       fetchMyAcceptedRequests,
@@ -59,7 +59,7 @@ export const SocketProvider = ({ children }) => {
   }, [
     addRequest,
     addAdminRequest,
-    updateRequestState,   // ✅ FIX
+    updateRequestState,
     setRequestStatus,
     fetchMyRequests,
     fetchMyAcceptedRequests,
@@ -100,6 +100,8 @@ export const SocketProvider = ({ children }) => {
         ? import.meta.env.VITE_SOCKET_URL
         : 'http://localhost:5000';
 
+    // ✅ userId is passed so backend sets socket.userId, populates userSocketMap,
+    // and getUserSocketId(helperId) works for direct cancel notifications
     const authPayload = user
       ? { userId: user._id, role: user.role }
       : { guestId };
@@ -116,20 +118,20 @@ export const SocketProvider = ({ children }) => {
     socketRef.current = newSocket;
     setSocket(newSocket);
 
-    // ── CONNECT ──────────────────────────────────────────────────────────────
+    // ── CONNECT ───────────────────────────────────────────────────────────
     newSocket.on('connect', () => {
       console.log('✅ Socket connected:', newSocket.id);
       setIsConnected(true);
       cbRef.current.triggerSafetyRefetch();
     });
 
-    // ── RECONNECT ─────────────────────────────────────────────────────────────
+    // ── RECONNECT ─────────────────────────────────────────────────────────
     newSocket.on('reconnect', () => {
       console.log('🔄 Socket reconnected — re-registering');
       cbRef.current.triggerSafetyRefetch();
     });
 
-    // ── DISCONNECT ────────────────────────────────────────────────────────────
+    // ── DISCONNECT ────────────────────────────────────────────────────────
     newSocket.on('disconnect', () => {
       console.log('❌ Socket disconnected');
       setIsConnected(false);
@@ -140,7 +142,7 @@ export const SocketProvider = ({ children }) => {
       setIsConnected(false);
     });
 
-    // ── NEW REQUEST ───────────────────────────────────────────────────────────
+    // ── NEW REQUEST ───────────────────────────────────────────────────────
     newSocket.on('new_request', (data) => {
       if (!data.request?._id) return;
 
@@ -161,7 +163,7 @@ export const SocketProvider = ({ children }) => {
       cbRef.current.triggerSafetyRefetch();
     });
 
-    // ── ADMIN NEW REQUEST ─────────────────────────────────────────────────────
+    // ── ADMIN NEW REQUEST ─────────────────────────────────────────────────
     newSocket.on('admin_new_request', (data) => {
       if (!data.request?._id) return;
       const currentUser = cbRef.current.user;
@@ -171,13 +173,13 @@ export const SocketProvider = ({ children }) => {
       }
     });
 
-    // ── REQUEST ACCEPTED ──────────────────────────────────────────────────────
+    // ── REQUEST ACCEPTED ──────────────────────────────────────────────────
     newSocket.on('request_accepted', (data) => {
       if (cbRef.current.mode === 'browse') return;
 
       if (!data.request) return;
       console.log('✅ request_accepted:', data.request._id);
-      cbRef.current.updateRequestState(data.request);   // ✅ FIX
+      cbRef.current.updateRequestState(data.request);
       toast.success(data.message || 'Your request was accepted!', {
         duration: 5000,
         icon: '🤝',
@@ -186,11 +188,11 @@ export const SocketProvider = ({ children }) => {
       cbRef.current.triggerSafetyRefetch();
     });
 
-    // ── REQUEST UPDATED ───────────────────────────────────────────────────────
+    // ── REQUEST UPDATED ───────────────────────────────────────────────────
     newSocket.on('request_updated', (data) => {
       if (!data.request) return;
       console.log('🔄 request_updated:', data.request._id, data.request.status);
-      cbRef.current.updateRequestState(data.request);   // ✅ FIX — was updateRequest (PUT fn)
+      cbRef.current.updateRequestState(data.request);
       cbRef.current.triggerSafetyRefetch();
     });
 
@@ -199,13 +201,13 @@ export const SocketProvider = ({ children }) => {
       cbRef.current.triggerSafetyRefetch();
     });
 
-    // ── REQUEST COMPLETED ─────────────────────────────────────────────────────
+    // ── REQUEST COMPLETED ─────────────────────────────────────────────────
     newSocket.on('request_completed', (data) => {
       if (cbRef.current.mode === 'browse') return;
 
       if (!data.request) return;
       console.log('🎉 request_completed:', data.request._id);
-      cbRef.current.updateRequestState(data.request);   // ✅ FIX
+      cbRef.current.updateRequestState(data.request);
       toast.success(data.message || 'Request completed!', {
         duration: 4000,
         icon: '🎉',
@@ -214,23 +216,49 @@ export const SocketProvider = ({ children }) => {
       cbRef.current.fetchMyAcceptedRequests();
     });
 
-    // ── ADMIN REQUEST COMPLETED ───────────────────────────────────────────────
+    // ── ADMIN REQUEST COMPLETED ───────────────────────────────────────────
     newSocket.on('admin_request_completed', (data) => {
       if (!data.request) return;
       const currentUser = cbRef.current.user;
       if (currentUser?.role === 'admin') {
-        cbRef.current.updateRequestState(data.request);   // ✅ FIX
+        cbRef.current.updateRequestState(data.request);
       }
     });
 
-    // ── SOS ACCEPTED ──────────────────────────────────────────────────────────
+    // ── SOS ACCEPTED ──────────────────────────────────────────────────────
     newSocket.on('requestAccepted', (data) => {
       if (cbRef.current.mode === 'browse') return;
       console.log('✅ Your SOS/request was accepted:', data);
       cbRef.current.setRequestStatus('accepted');
     });
 
-    // ── Feature 4: viewer_count ───────────────────────────────────────────────
+    // ── REQUEST CANCELLED ─────────────────────────────────────────────────
+    // Received by the assigned helper when the request owner cancels.
+    // Fires regardless of which page the helper is on because the backend
+    // targets their socket directly via getUserSocketId(acceptedBy).
+    // Also fires for anyone in request_<id> or viewers_<id> rooms.
+    newSocket.on('request_cancelled', (data) => {
+      if (!data.requestId) return;
+      console.log('🚫 request_cancelled:', data.requestId);
+
+      // Refresh feeds so the cancelled request disappears from their lists
+      cbRef.current.triggerSafetyRefetch();
+      cbRef.current.fetchMyAcceptedRequests();
+
+      // Only show the toast if this user is the assigned helper —
+      // the request owner's UI handles its own cancelled state locally
+      const currentUser = cbRef.current.user;
+      if (currentUser) {
+        toast.error(
+          data.reason
+            ? `Request cancelled: ${data.reason}`
+            : 'A request you were helping with has been cancelled.',
+          { duration: 6000, icon: '🚫' }
+        );
+      }
+    });
+
+    // ── Feature 4: viewer_count ───────────────────────────────────────────
     newSocket.on('viewer_count', ({ requestId, count }) => {
       if (!requestId) return;
       setViewerCounts((prev) => {
@@ -242,7 +270,7 @@ export const SocketProvider = ({ children }) => {
       });
     });
 
-    // ── CLEANUP ───────────────────────────────────────────────────────────────
+    // ── CLEANUP ───────────────────────────────────────────────────────────
     return () => {
       if (socketRef.current) {
         socketRef.current.disconnect();
@@ -255,7 +283,7 @@ export const SocketProvider = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?._id, guestId]);
 
-  // ── Existing utility functions ─────────────────────────────────────────────
+  // ── Utility functions ──────────────────────────────────────────────────
   const joinRequestRoom = useCallback((requestId) => {
     if (socketRef.current && requestId) {
       socketRef.current.emit('join_request_room', requestId);
